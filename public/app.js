@@ -1,8 +1,8 @@
 const FOLDERS = ['影片靈感', '文案點子', '語音備忘', '想拍的影片', '新歌靈感'];
-const STATUS = { todo: '代辦', doing: '正在處理', done: '已完成' };
-const DOT = { todo: '#ffb020', doing: '#7c5cff', done: '#3ddc84' };
+const STATUS = { todo: '待辦事項', doing: '正在處理', done: '已完成' };
+const DOT = { todo: '#ffd400', doing: '#ff9f1c', done: '#2ecc71' };
 let state = { items: [], tasks: [], folder: FOLDERS[0], addType: 'link' };
-let recorder = null, recChunks = [], recBlob = null;
+let recorder = null, recChunks = [], recBlob = null, recFile = null;
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -32,10 +32,10 @@ function switchView(v) {
 function pickFolder(f) {
   state.folder = f;
   state.addType = f === '語音備忘' ? 'audio' : 'link';
-  recBlob = null;
+  recBlob = null; recFile = null;
   renderIdeas();
 }
-function pickType(t) { state.addType = t; recBlob = null; renderIdeas(); }
+function pickType(t) { state.addType = t; recBlob = null; recFile = null; renderIdeas(); }
 
 function renderIdeas() {
   const el = document.getElementById('view-ideas');
@@ -62,10 +62,14 @@ function addForm() {
     body = `<input id="f-title" placeholder="標題（可空）" />
       <div class="row"><textarea id="f-content" placeholder="寫下你的點子..."></textarea></div>`;
   } else {
-    const preview = recBlob ? `<audio controls src="${URL.createObjectURL(recBlob)}"></audio>` : '<div class="muted">點「開始錄音」說話，再按「停止」。</div>';
+    const psrc = recBlob ? URL.createObjectURL(recBlob) : (recFile ? URL.createObjectURL(recFile) : '');
+    const preview = psrc ? `<audio controls src="${psrc}"></audio>` : '<div class="muted">點「開始錄音」直接錄，或從下面選一個已經錄好的檔案上傳。</div>';
     body = `<input id="f-title" placeholder="標題（可空）" />
       <div class="row">
         <button class="btn rec" id="rec-btn" onclick="toggleRec()">● 開始錄音</button>
+      </div>
+      <div class="row">
+        <label class="btn ghost" style="flex:1;text-align:center;cursor:pointer">📁 上傳錄音檔<input type="file" accept="audio/*" style="display:none" onchange="pickFile(this)" /></label>
       </div>
       <div style="margin-top:10px">${preview}</div>`;
   }
@@ -94,6 +98,7 @@ async function toggleRec() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     recorder = new MediaRecorder(stream);
     recChunks = [];
+    recFile = null;
     recorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
     recorder.onstop = () => {
       recBlob = new Blob(recChunks, { type: 'audio/webm' });
@@ -108,14 +113,29 @@ async function toggleRec() {
   }
 }
 
+function pickFile(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  recFile = f;
+  recBlob = null;
+  renderIdeas();
+}
+
 async function addItem() {
   const titleEl = document.getElementById('f-title');
   const title = titleEl ? titleEl.value.trim() : '';
   let content = '';
   if (state.addType === 'audio') {
-    if (!recBlob) { alert('請先錄一段語音'); return; }
+    const blob = recBlob || recFile;
+    if (!blob) { alert('請先錄一段語音，或選一個錄音檔'); return; }
+    let ext = 'webm', ct = 'audio/webm';
+    if (recFile) {
+      ct = recFile.type || 'audio/mpeg';
+      const m = recFile.name.match(/\.([a-z0-9]+)$/i);
+      ext = m ? m[1].toLowerCase() : ((ct.split('/')[1]) || 'mp3');
+    }
     try {
-      const up = await fetch('/api/upload?ext=webm', { method: 'POST', headers: { 'Content-Type': 'audio/webm' }, body: recBlob });
+      const up = await fetch('/api/upload?ext=' + encodeURIComponent(ext), { method: 'POST', headers: { 'Content-Type': ct }, body: blob });
       const j = await up.json();
       if (!up.ok) throw new Error(j.error || '上傳失敗');
       content = j.url;
@@ -128,6 +148,7 @@ async function addItem() {
   try {
     await api('/api/items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder: state.folder, type: state.addType, title, content }) });
     recBlob = null;
+    recFile = null;
     await loadAll();
   } catch (e) { alert('新增失敗：' + e.message); }
 }
@@ -151,13 +172,13 @@ function renderBoard() {
   const done = state.tasks.filter((t) => t.status === 'done');
 
   const banner = `<div class="banner">
-    <div class="stat"><b>${todo.length}</b><span>待辦 代辦</span></div>
-    <div class="stat"><b style="color:#7c5cff">${doing.length}</b><span>正在處理</span></div>
-    <div class="stat"><b style="color:#3ddc84">${done.length}</b><span>已完成</span></div>
+    <div class="stat"><b>${todo.length}</b><span>待辦事項</span></div>
+    <div class="stat"><b style="color:#ff9f1c">${doing.length}</b><span>正在處理</span></div>
+    <div class="stat"><b style="color:#2ecc71">${done.length}</b><span>已完成</span></div>
   </div>`;
 
   const execIdeas = [...new Set(doing.filter((t) => t.ideaId).map((t) => t.ideaId))].map((id) => `<li>🔥 ${esc(ideaTitle(id))}</li>`).join('');
-  const exec = `<div class="exec"><h2>正在執行的創意</h2>${execIdeas ? '<ul style="margin:0;padding-left:18px">' + execIdeas + '</ul>' : '<div class="muted">把代辦移到「正在處理」並關聯一個靈感，這裡就會顯示。</div>'}</div>`;
+  const exec = `<div class="exec"><h2>正在執行的創意</h2>${execIdeas ? '<ul style="margin:0;padding-left:18px">' + execIdeas + '</ul>' : '<div class="muted">把待辦事項移到「正在處理」並關聯一個靈感，這裡就會顯示。</div>'}</div>`;
 
   const ideaOpts = ['<option value="">（可選）關聯一個靈感</option>']
     .concat(state.items.map((x) => `<option value="${x.id}">${esc(ideaTitle(x.id) || x.folder)}</option>`)).join('');
@@ -165,7 +186,7 @@ function renderBoard() {
     <input id="t-title" placeholder="要做什麼事？" />
     <div class="row"><select id="t-idea">${ideaOpts}</select></div>
     <div class="row"><input id="t-due" type="date" /></div>
-    <div class="row"><button class="btn" style="flex:1" onclick="addTask()">➕ 新增代辦</button></div>
+    <div class="row"><button class="btn" style="flex:1" onclick="addTask()">➕ 新增待辦事項</button></div>
   </div>`;
 
   const col = (key, arr) => `<div class="col">
@@ -180,7 +201,7 @@ function taskCard(t) {
   const due = t.due ? `<span class="tag due">📅 ${esc(t.due)}</span>` : '';
   let mv = '';
   if (t.status === 'todo') mv = `<button onclick="moveTask('${t.id}','doing')">開始 →</button>`;
-  else if (t.status === 'doing') mv = `<button onclick="moveTask('${t.id}','todo')">← 回待辦</button><button onclick="moveTask('${t.id}','done')">完成 ✓</button>`;
+  else if (t.status === 'doing') mv = `<button onclick="moveTask('${t.id}','todo')">← 回待辦事項</button><button onclick="moveTask('${t.id}','done')">完成 ✓</button>`;
   else mv = `<button onclick="moveTask('${t.id}','doing')">← 重做</button>`;
   return `<div class="tcard"><p>${esc(t.title)}</p>${idea}${due}
     <div class="mv">${mv}</div>
@@ -202,7 +223,7 @@ async function moveTask(id, status) {
   catch (e) { alert('更新失敗：' + e.message); }
 }
 async function delTask(id) {
-  if (!confirm('確定刪除這件代辦？')) return;
+  if (!confirm('確定刪除這件待辦事項？')) return;
   try { await api('/api/tasks?id=' + encodeURIComponent(id), { method: 'DELETE' }); await loadAll(); }
   catch (e) { alert('刪除失敗：' + e.message); }
 }
