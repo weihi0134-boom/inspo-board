@@ -5,29 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>靈感收集箱</title>
 <style>
-  :root{ --bg:#000000; --card:#141414; --card2:#1f1f1f; --line:#2e2e2e; --txt:#f5f5f5; --sub:#9a9a9a; --brand:#ffd400; --brand2:#ffe14d; --warn:#ffd400; --ok:#2ecc71; }
+  :root{ --bg:#e0f0f5; --card:#ffffff; --card2:#f4f9fb; --line:#cdd9df; --txt:#1a1614; --sub:#6f767c; --brand:#c18c4c; --brand2:#a9743a; --ink:#1a1614; --warn:#b5584f; --ok:#7d9a6d; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;}
-  header{position:sticky;top:0;z-index:10;background:rgba(15,17,21,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+  header{position:sticky;top:0;z-index:10;background:rgba(224,240,245,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
   .wrap{max-width:860px;margin:0 auto;padding:0 16px;}
   h1{font-size:20px;margin:14px 0 10px;display:flex;align-items:center;gap:8px}
   .tabs{display:flex;gap:8px;padding-bottom:10px}
   .tab{flex:1;text-align:center;padding:10px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-size:15px;cursor:pointer}
-  .tab.active{background:var(--brand);color:#111;border-color:var(--brand);font-weight:600}
+  .tab.active{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
   main{padding:16px 0 80px}
   .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px}
   .chip{white-space:nowrap;padding:8px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-size:14px;cursor:pointer}
-  .chip.active{background:var(--brand2);color:#07110d;border-color:var(--brand2);font-weight:600}
+  .chip.active{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:16px}
   .seg{display:flex;gap:6px;margin-bottom:10px}
   .seg button{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--sub);font-size:14px;cursor:pointer}
-  .seg button.on{background:var(--brand);color:#111;border-color:var(--brand);font-weight:600}
+  .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
   input,textarea,select{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:15px;font-family:inherit}
   textarea{min-height:70px;resize:vertical}
   .row{display:flex;gap:8px;margin-top:8px}
-  .btn{padding:11px 16px;border-radius:10px;border:none;background:var(--brand);color:#111;font-size:15px;cursor:pointer;font-weight:700}
+  .btn{padding:11px 16px;border-radius:10px;border:none;background:var(--brand);color:#fff;font-size:15px;cursor:pointer;font-weight:700}
   .btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);font-weight:400}
-  .btn.rec{background:#e5484d;color:#fff}
+  .btn.rec{background:#c05a4d;color:#fff}
   .btn:disabled{opacity:.5}
   .muted{color:var(--sub);font-size:13px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
@@ -47,7 +47,7 @@
   .dot{width:9px;height:9px;border-radius:50%}
   .tcard{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
   .tcard p{margin:0 0 6px;font-size:14px}
-  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:#2a2f3a;color:var(--brand2);margin-top:4px}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:#efe3d3;color:var(--brand2);margin-top:4px}
   .tag.due{color:var(--warn)}
   .mv{display:flex;gap:6px;margin-top:6px}
   .mv button{flex:1;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--sub);font-size:12px;cursor:pointer}

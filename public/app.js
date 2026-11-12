@@ -1,6 +1,6 @@
 const FOLDERS = ['影片靈感', '文案點子', '語音備忘', '想拍的影片', '新歌靈感'];
 const STATUS = { todo: '待辦事項', doing: '正在處理', done: '已完成' };
-const DOT = { todo: '#ffd400', doing: '#ff9f1c', done: '#2ecc71' };
+const DOT = { todo: '#c18c4c', doing: '#5b7b8a', done: '#7d9a6d' };
 let state = { items: [], tasks: [], folder: FOLDERS[0], addType: 'link' };
 let recorder = null, recChunks = [], recBlob = null, recFile = null;
 
@@ -107,7 +107,7 @@ async function toggleRec() {
     };
     recorder.start();
     btn.textContent = '■ 停止錄音';
-    btn.style.background = '#2a2f3a';
+    btn.style.background = '#5b7b8a';
   } catch (e) {
     alert('無法使用麥克風，請允許麥克風權限：' + e.message);
   }
@@ -173,8 +173,8 @@ function renderBoard() {
 
   const banner = `<div class="banner">
     <div class="stat"><b>${todo.length}</b><span>待辦事項</span></div>
-    <div class="stat"><b style="color:#ff9f1c">${doing.length}</b><span>正在處理</span></div>
-    <div class="stat"><b style="color:#2ecc71">${done.length}</b><span>已完成</span></div>
+    <div class="stat"><b style="color:#5b7b8a">${doing.length}</b><span>正在處理</span></div>
+    <div class="stat"><b style="color:#7d9a6d">${done.length}</b><span>已完成</span></div>
   </div>`;
 
   const execIdeas = [...new Set(doing.filter((t) => t.ideaId).map((t) => t.ideaId))].map((id) => `<li>🔥 ${esc(ideaTitle(id))}</li>`).join('');
