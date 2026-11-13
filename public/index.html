@@ -135,7 +135,7 @@
 
   /* ===== 小黑貓 ===== */
   .cat-stage{position:fixed;left:0;right:0;bottom:0;height:0;pointer-events:none;z-index:8}
-  .cat-stage svg{position:absolute;bottom:2px;width:84px;height:52px;filter:drop-shadow(0 2px 3px rgba(26,22,20,.18));transform:translateX(0);transition:transform .9s linear;overflow:visible;pointer-events:auto;cursor:pointer}
+  .cat-stage svg{position:absolute;bottom:2px;width:76px;height:54px;filter:drop-shadow(0 2px 3px rgba(26,22,20,.18));transform:translateX(0);transition:transform .9s linear;overflow:visible;pointer-events:auto;cursor:pointer}
   /* 走路：四隻腳像真貓一樣「大腿整組前後擺 + 腳掌抬落地」（左後→左前→右後→右前，四拍交錯） */
   .cat-stage svg.walk .leg{animation-duration:.62s;animation-iteration-count:infinite;animation-timing-function:cubic-bezier(.45,.05,.55,.95)}
   .cat-stage svg.walk .leg.rh{animation-name:stepA}
@@ -156,7 +156,7 @@
   /* 貓腳印圖層 */
   .cat-paws{position:absolute;left:0;bottom:0;width:100%;height:74px;pointer-events:none}
   /* 尾巴 */
-  .cat-stage svg .tail{transform-origin:19px 34px;animation:tailWag 1.8s infinite ease-in-out}
+  .cat-stage svg .tail{transform-origin:18px 39px;animation:tailWag 1.8s infinite ease-in-out}
   @keyframes tailWag{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(11deg)}}
   /* 眨眼、睡覺 */
   .cat-stage svg .eye{transition:transform .12s;transform-origin:center}
@@ -167,7 +167,7 @@
   .cat-stage svg.stretch #cat-body{transform-origin:50% 100%;animation:stretch 1.9s ease-in-out}
   @keyframes stretch{0%,100%{transform:scale(1,1)}45%{transform:scale(1.14,.86)}}
   /* 梳毛：低頭蹭 */
-  .cat-stage svg.groom #cat-head{transform-origin:80px 33px;animation:groom .55s ease-in-out 4}
+  .cat-stage svg.groom #cat-head{transform-origin:64px 37px;animation:groom .55s ease-in-out 4}
   @keyframes groom{0%,100%{transform:rotate(0)}50%{transform:rotate(14deg) translate(1px,3px)}}
   /* 打哈欠：頭微仰、嘴開 */
   .cat-stage svg.yawn #cat-head{animation:yawnHead 1.6s ease-in-out}
@@ -217,58 +217,58 @@
   <canvas class="cat-paws" id="cat-paws"></canvas>
   <div class="cat-zzz" id="cat-zzz">z z Z</div>
   <div class="cat-hint" id="cat-hint">摸摸</div>
-  <svg id="cat-run" viewBox="0 0 100 62" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <svg id="cat-run" viewBox="0 0 84 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <g id="cat-body">
-      <!-- 尾巴 -->
-      <path class="tail" d="M18 34 C11 34.5 8 28.5 12 25.2 C15.2 22.6 19 25.6 17.2 28.6"
-            fill="none" stroke="#221d1b" stroke-width="3.4" stroke-linecap="round"/>
+      <!-- 尾巴：從屁股翹起來，S 型往上捲 -->
+      <ellipse cx="42" cy="35" rx="24" ry="13" fill="#141110"/>
+      <ellipse cx="49" cy="40" rx="13" ry="6" fill="#2a2320" opacity=".45"/>
+      <path class="tail" d="M18 40 C9 40.5 4.5 33 9 28.5 C12.6 24.8 17.6 27.8 15.8 31.6"
+            fill="none" stroke="#141110" stroke-width="4" stroke-linecap="round"/>
 
-      <!-- 遠側兩隻腳 -->
-      <g class="leg lh"><rect x="64.2" y="48" width="4.4" height="10" rx="2.2" fill="#37302d"/><ellipse cx="66.4" cy="57.4" rx="3.2" ry="2" fill="#37302d"/></g>
-      <g class="leg lf"><rect x="82.2" y="49" width="4.2" height="9" rx="2.1" fill="#37302d"/><ellipse cx="84.3" cy="57.4" rx="3.1" ry="1.9" fill="#37302d"/></g>
-
-      <!-- 身體：跪坐／走路中的中段，肚子離地 -->
-      <path d="M22 30 C24 20 33 15.5 43 16.5 C52 17.6 60 21.5 68 24.5 C78 28 88 29.5 94 31.2
-               C97 32 97 35.6 93.4 36.4 C80 39 66 40.4 52 40.4 C38 40.4 26 38.4 21.4 35.4 C19.6 34 19.8 32 22 30 Z" fill="#221d1b"/>
-
-      <!-- 近側大腿 + 小腿（跪姿，膝蓋微彎） -->
-      <g class="leg rh">
-        <ellipse cx="30.5" cy="30.5" rx="9.6" ry="9" fill="#1b1615"/>
-        <path d="M33 37 C36.5 42.5 36 47.5 33.4 49.4 C30 51.8 25.6 50 26.6 46" fill="none" stroke="#1b1615" stroke-width="8.2" stroke-linecap="round"/>
-        <ellipse cx="29.6" cy="55.4" rx="4.4" ry="2.6" fill="#1b1615"/>
-        <path d="M32.5 33 Q36 41 33.6 47" fill="none" stroke="#3b3330" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+      <!-- 後腳（圓柱狀、無趾節，跟第一版一樣） -->
+      <g class="leg rb" style="transform-origin:31px 46px">
+        <rect x="27.4" y="26" width="8.4" height="24" rx="4.2" fill="#141110"/>
       </g>
-      <!-- 近側前腳（直，腳掌著地） -->
-      <g class="leg rf">
-        <rect x="83.4" y="34" width="5.4" height="24" rx="2.7" fill="#1b1615"/>
-        <ellipse cx="86.2" cy="57.2" rx="3.6" ry="2.3" fill="#1b1615"/>
+      <!-- 前腳（遠） -->
+      <g class="leg rf" style="transform-origin:57px 46px">
+        <rect x="53.4" y="26" width="8.2" height="24" rx="4.1" fill="#141110"/>
       </g>
-      <!-- 遠側前腳（在身體後方露出一點） -->
-      <g class="leg lf2"><rect x="78.6" y="38" width="4.6" height="20" rx="2.3" fill="#3b3330"/><ellipse cx="80.9" cy="57.4" rx="3.2" ry="2" fill="#3b3330"/></g>
+      <g class="leg lb" style="transform-origin:35px 46px">
+        <rect x="31.2" y="26" width="8" height="23.4" rx="4" fill="#1a1615"/>
+      </g>
+      <g class="leg lf" style="transform-origin:61px 46px">
+        <rect x="57.2" y="26" width="7.8" height="23.4" rx="3.9" fill="#1a1615"/>
+      </g>
 
-      <!-- 頭 -->
+
+      <!-- 頭：大圓臉 -->
       <g id="cat-head">
-        <ellipse cx="80.5" cy="22" rx="13.2" ry="12.2" fill="#221d1b"/>
-        <path d="M70.6 15 L70 4.4 L79 11.6 Z" fill="#221d1b"/>
-        <path d="M83 11.2 L91.4 4.4 L91.8 15 Z" fill="#221d1b"/>
-        <path d="M72.4 13.6 L72.2 7.6 L77.4 11.6 Z" fill="#d59aa8" opacity=".7"/>
-        <path d="M85.2 10.8 L89.6 7 L89.8 13.8 Z" fill="#d59aa8" opacity=".7"/>
+        <circle cx="64.5" cy="23.5" r="14" fill="#141110"/>
+        <!-- 耳朵：小三角、圓角、內側粉紅 -->
+        <path d="M54.4 15.4 L55.6 4.4 L63.6 12.4 Z" fill="#141110" stroke="#141110" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M65.2 12.4 L73.2 4.4 L74.4 15.4 Z" fill="#141110" stroke="#141110" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M56.6 13.6 L57.4 8.6 L60.8 12.6 Z" fill="#e0a2b0"/>
+        <path d="M68 12.6 L71.4 8.6 L72.2 13.6 Z" fill="#e0a2b0"/>
+        <!-- 大黃眼＋深色圓瞳孔＋白色高光 -->
         <g class="eyes">
-          <ellipse class="eye" cx="76.4" cy="22.4" rx="3.3" ry="3.8" fill="#ffd94a"/>
-          <ellipse class="eye" cx="85.6" cy="22.4" rx="3.3" ry="3.8" fill="#ffd94a"/>
-          <ellipse cx="76.7" cy="22.8" rx="1.5" ry="2.4" fill="#241f1c"/>
-          <ellipse cx="85.9" cy="22.8" rx="1.5" ry="2.4" fill="#241f1c"/>
-          <circle cx="77.6" cy="21.2" r="1.05" fill="#fff"/>
-          <circle cx="86.8" cy="21.2" r="1.05" fill="#fff"/>
+          <circle class="eye" cx="59.8" cy="24" r="4.3" fill="#ffd94a"/>
+          <circle class="eye" cx="70.4" cy="24" r="4.3" fill="#ffd94a"/>
+          <circle cx="60" cy="24.4" r="2.2" fill="#1a1412"/>
+          <circle cx="70.6" cy="24.4" r="2.2" fill="#1a1412"/>
+          <circle cx="61.2" cy="22.8" r="1.15" fill="#fff"/>
+          <circle cx="71.8" cy="22.8" r="1.15" fill="#fff"/>
         </g>
-        <path d="M79.5 27.8 l1.7 .8 1.7 -.8" fill="none" stroke="#d59aa8" stroke-width="1.4" stroke-linecap="round"/>
-        <path d="M81.2 28.6 q-1.4 1.6 -3 .9 M81.2 28.6 q1.4 1.6 3 .9" fill="none" stroke="#7d7168" stroke-width=".9" stroke-linecap="round" opacity=".8"/>
-        <ellipse cx="72.4" cy="27.6" rx="2.4" ry="1.5" fill="#d59aa8" opacity=".32"/>
-        <ellipse cx="89.4" cy="27.6" rx="2.4" ry="1.5" fill="#d59aa8" opacity=".32"/>
-        <g stroke="#9a8e86" stroke-width=".75" stroke-linecap="round" opacity=".6">
-          <path d="M72.8 26 h-5"/><path d="M73 28.4 h-5"/>
-          <path d="M88 26 h5"/><path d="M87.8 28.4 h5"/>
+        <!-- 小粉鼻＋微笑嘴 -->
+        <path d="M63.6 30.4 l1.7 .9 1.7 -.9" fill="none" stroke="#e0a2b0" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M65.3 31.3 q-1.5 1.7 -3.2 1 M65.3 31.3 q1.5 1.7 3.2 1" fill="none" stroke="#8b7d73" stroke-width=".95" stroke-linecap="round" opacity=".85"/>
+        <!-- 鬍鬚 -->
+        <g stroke="#a2958c" stroke-width=".85" stroke-linecap="round" opacity=".7">
+          <path d="M55.4 29.4 h-5.6"/><path d="M55.6 32 h-5.6"/>
+          <path d="M74.6 29.4 h5.6"/><path d="M74.4 32 h5.6"/>
         </g>
+        <!-- 腮紅 -->
+        <ellipse cx="55.4" cy="30.6" rx="2.6" ry="1.6" fill="#e0a2b0" opacity=".45"/>
+        <ellipse cx="75.4" cy="30.6" rx="2.6" ry="1.6" fill="#e0a2b0" opacity=".45"/>
       </g>
     </g>
   </svg>

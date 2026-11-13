@@ -681,8 +681,8 @@ function paintPaws() {
   for (let i = pawPrints.length - 1; i >= 0; i--) {
     const p = pawPrints[i];
     const age = now - p.t;
-    if (age > 2600) { pawPrints.splice(i, 1); continue; }
-    const a = age < 1500 ? 0.42 : 0.42 * (1 - (age - 1500) / 1100);
+    if (age > 4600) { pawPrints.splice(i, 1); continue; }
+    const a = age < 3400 ? 0.34 : 0.34 * (1 - (age - 3400) / 1200);
     drawPaw(g, p.x, p.y, p.a, Math.max(0, a));
   }
   if (pawPrints.length) requestAnimationFrame(paintPaws);
@@ -693,25 +693,24 @@ function catPawTrack(fromX, toX, dur) {
   clearTimeout(pawTimer);
   sizePawCanvas();
   const dir = toX > fromX ? 1 : -1;
-  const pxPerSec = Math.abs(toX - fromX) / dur;
-  if (pxPerSec > 420) return; // 太快就不印了（例如跳轉）
-  let n = 0;
-  const stepMs = 150;
-  const total = dur * 1000;
-  const startT = performance.now();
-  function tick() {
-    const elapsed = performance.now() - startT;
-    if (elapsed > total + 300 || !catOn) return;
-    const ratio = Math.min(1, elapsed / total);
+  const dist = Math.abs(toX - fromX);
+  if (dist < 40) return;                        // 只有走一小段就不印
+  const pxPerSec = dist / dur;
+  if (pxPerSec > 420) return;                   // 跳過去的那一段不印
+  const count = Math.max(3, Math.min(5, Math.round(dist / 150)));  // 只印 3～5 個
+  let i = 0;
+  function drop() {
+    if (!catOn) return;
+    i++;
+    const ratio = i / (count + 0.6);
     const x = fromX + (toX - fromX) * ratio;
-    const side = n % 2 === 0 ? 13 : 21;  // 左右腳交錯
-    const y = 58 + (n % 2 === 0 ? 0 : -1.2);
-    pawPrints.push({ x: x + side, y, a: dir > 0 ? 0 : Math.PI, t: performance.now() });
-    n++;
+    const side = i % 2 === 0 ? 12 : 20;         // 左右腳交錯
+    pawPrints.push({ x: x + side, y: 56 + (i % 2 === 0 ? 0 : -1.4), a: dir > 0 ? 0 : Math.PI, t: performance.now() });
+    while (pawPrints.length > 5) pawPrints.shift();
     if (pawPrints.length === 1) requestAnimationFrame(paintPaws);
-    pawTimer = setTimeout(tick, stepMs);
+    if (i < count) pawTimer = setTimeout(drop, Math.max(280, (dur * 1000) / (count + 0.6)));
   }
-  tick();
+  pawTimer = setTimeout(drop, Math.min(600, (dur * 1000) / (count + 0.6)));
 }
 function catMoveFx(target) {
   const zzz = document.getElementById('cat-zzz');
