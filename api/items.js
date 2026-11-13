@@ -16,6 +16,8 @@ export default async function handler(req, res) {
         type: ['link', 'text', 'audio'].includes(body.type) ? body.type : 'text',
         title: String(body.title || '').slice(0, 200),
         content: String(body.content || '').slice(0, 5000),
+        note: String(body.note || '').slice(0, 5000),
+        images: Array.isArray(body.images) ? body.images.slice(0, 8).map((u) => String(u)) : [],
         createdAt: Date.now(),
       };
       items.unshift(item);
