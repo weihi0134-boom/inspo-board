@@ -4,6 +4,7 @@ const DOT = { todo: '#d5b185', doing: '#7fa3b2', done: '#7d9a6d' };
 let state = { items: [], tasks: [], settings: { calendarSrc: '' }, folder: FOLDERS[0], addType: 'link', calMode: 'week' };
 let recorder = null, recChunks = [], recBlob = null, recFile = null;
 let imgFiles = [];
+let draft = { title: '', link: '', content: '', note: '' };
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -33,69 +34,68 @@ function switchView(v) {
 /* ===== IDEAS ===== */
 function pickFolder(f) {
   state.folder = f;
-  state.addType = f === '語音備忘' ? 'audio' : 'link';
-  recBlob = null; recFile = null; imgFiles = [];
   renderIdeas();
 }
-function pickType(t) { state.addType = t; recBlob = null; recFile = null; imgFiles = []; renderIdeas(); }
 
 function renderIdeas() {
   const el = document.getElementById('view-ideas');
   if (!el) return;
   const chips = FOLDERS.map((f) => `<div class="chip ${f === state.folder ? 'active' : ''}" onclick="pickFolder('${f}')">${f}</div>`).join('');
-  const list = state.items.filter((x) => x.folder === state.folder);
-  const cards = list.length ? list.map(itemCard).join('') : '<div class="empty">這個資料夾還沒有靈感，從上面新增吧！</div>';
+  const all = state.items.slice().sort((a, b) => b.createdAt - a.createdAt);
+  const list = all.length ? all.map(itemCard).join('') : '<div class="empty">還沒有靈感，從上面新增吧！</div>';
+  const count = all.length;
   el.innerHTML = `
     <div class="chips">${chips}</div>
-    <div class="panel"><h4>新增靈感到「${state.folder}」</h4>${addForm()}</div>
-    ${cards}`;
+    <div class="panel"><h4>新增靈感 · 會存到「${state.folder}」</h4>${addForm()}</div>
+    <div class="listhead">全部靈感 <span class="muted">(${count})</span></div>
+    ${list}`;
 }
 
 function addForm() {
-  const seg = `<div class="seg">
-    <button class="${state.addType === 'link' ? 'on' : ''}" onclick="pickType('link')">🔗 連結</button>
-    <button class="${state.addType === 'text' ? 'on' : ''}" onclick="pickType('text')">📝 文字</button>
-    <button class="${state.addType === 'audio' ? 'on' : ''}" onclick="pickType('audio')">🎤 錄音</button>
-  </div>`;
+  const titleField = `<div class="field"><label>標題</label><input id="f-title" placeholder="選填，幫這則靈感取個名字" value="${esc(draft.title || '')}" oninput="draft.title=this.value" /></div>`;
 
-  const titleField = `<div class="field"><label>標題</label><input id="f-title" placeholder="選填，幫這則靈感取個名字" /></div>`;
-  let mainField = '';
-  if (state.addType === 'link') {
-    mainField = `<div class="field"><label>連結</label><input id="f-content" placeholder="貼上影片或網頁連結" /></div>`;
-  } else if (state.addType === 'text') {
-    mainField = `<div class="field"><label>內容</label><textarea id="f-content" placeholder="寫下你的點子..."></textarea></div>`;
-  } else {
-    const psrc = recBlob ? URL.createObjectURL(recBlob) : (recFile ? URL.createObjectURL(recFile) : '');
-    const preview = psrc ? `<audio controls src="${psrc}"></audio>` : '<div class="muted">按「開始錄音」直接錄，或選一個已經錄好的檔案上傳。</div>';
-    mainField = `<div class="field"><label>語音</label>
-      <div class="row"><button class="btn rec" id="rec-btn" onclick="toggleRec()" style="flex:1">● 開始錄音</button></div>
+  const linkField = `<div class="field"><label>連結</label><input id="f-link" placeholder="貼上影片、網頁、貼文連結（可空）" value="${esc(draft.link)}" oninput="draft.link=this.value" /></div>`;
+  const textField = `<div class="field"><label>文字 / 內容</label><textarea id="f-content" placeholder="寫下你的點子、看到的一段話..." oninput="draft.content=this.value">${esc(draft.content)}</textarea></div>`;
+
+  const psrc = recBlob ? URL.createObjectURL(recBlob) : (recFile ? URL.createObjectURL(recFile) : '');
+  const preview = psrc ? `<audio controls src="${psrc}"></audio>` : '<div class="muted">按「開始錄音」直接錄，或選一個已經錄好的檔案上傳。</div>';
+  const audioField = `<div class="field"><label>錄音 / 語音</label>
+      <div class="row"><button class="btn rec" id="rec-btn" onclick="toggleRec()" style="flex:1">${recorder && recorder.state === 'recording' ? '■ 停止錄音' : '● 開始錄音'}</button></div>
       <div class="row"><label class="btn ghost" style="flex:1;text-align:center;cursor:pointer;margin:0">📁 上傳錄音檔<input type="file" accept="audio/*" style="display:none" onchange="pickFile(this)" /></label></div>
       <div style="margin-top:10px">${preview}</div></div>`;
-  }
+
+  const noteField = `<div class="field"><label>內容 / 備註</label><textarea id="f-note" placeholder="補充說明、想法、為什麼存這個..." oninput="draft.note=this.value">${esc(draft.note)}</textarea></div>`;
 
   const thumbs = imgFiles.map((f, i) => `<img src="${URL.createObjectURL(f)}" onclick="rmImg(${i})" title="點一下移除" />`).join('');
   const imgField = `<div class="field"><label>圖片 / 截圖（可多張）</label>
     <label class="btn ghost" style="display:block;text-align:center;cursor:pointer;margin:0">📷 上傳截圖<input type="file" accept="image/*" multiple style="display:none" onchange="pickImages(this)" /></label>
     ${thumbs ? `<div class="thumbs">${thumbs}</div><div class="muted" style="margin-top:6px">點圖片可移除</div>` : ''}</div>`;
 
-  const noteField = `<div class="field"><label>內容 / 備註</label><textarea id="f-note" placeholder="補充說明、想法、為什麼存這個..."></textarea></div>`;
-
-  return seg + titleField + mainField + noteField + imgField +
+  return titleField + linkField + textField + audioField + noteField + imgField +
     `<div class="row"><button class="btn" onclick="addItem()" style="flex:1">➕ 加到「${state.folder}」</button></div>`;
 }
 
 function itemCard(x) {
   let inner = '';
-  if (x.type === 'link') inner = `<a href="${esc(x.content)}" target="_blank" rel="noopener">${esc(x.content)}</a>`;
-  else if (x.type === 'audio') inner = `<audio controls src="${esc(x.content)}"></audio>`;
-  else inner = `<div style="white-space:pre-wrap;font-size:14px;line-height:1.55">${esc(x.content)}</div>`;
+  if (x.type === 'link' && x.content) {
+    inner += `<a href="${esc(x.content)}" target="_blank" rel="noopener">${esc(x.content)}</a>`;
+  } else if (x.type === 'audio' && x.content) {
+    inner += `<audio controls src="${esc(x.content)}"></audio>`;
+  } else if (x.type === 'text' && x.content) {
+    inner += `<div style="white-space:pre-wrap;font-size:14px;line-height:1.55">${esc(x.content)}</div>`;
+  }
+  if (x.type === 'link' && x.text) {
+    inner += `<div style="white-space:pre-wrap;font-size:14px;line-height:1.55;margin-top:6px">${esc(x.text)}</div>`;
+  }
+  if (x.audioUrl) inner += `<audio controls src="${esc(x.audioUrl)}"></audio>`;
   const note = x.note ? `<div style="margin-top:8px;font-size:13px;color:#5b6b73;white-space:pre-wrap;line-height:1.55">${esc(x.note)}</div>` : '';
   const imgs = (x.images && x.images.length) ? `<div class="thumbs">${x.images.map((u) => `<img src="${esc(u)}" onclick="zoom('${esc(u)}')" />`).join('')}</div>` : '';
   const title = x.title ? `<h3>${esc(x.title)}</h3>` : '';
+  const fold = `<span class="tag fold">${esc(x.folder || '')}</span>`;
   const d = new Date(x.createdAt);
   const ds = `${d.getMonth() + 1}/${d.getDate()}`;
   return `<div class="card">${title}${inner}${note}${imgs}
-    <div class="meta"><span class="muted">${ds}</span>
+    <div class="meta"><span class="muted">${ds}</span><span>${fold}</span>
     <button class="del" onclick="delItem('${x.id}')">🗑 刪除</button></div></div>`;
 }
 
@@ -156,25 +156,29 @@ async function uploadBlob(blob, ext, ct) {
 async function addItem() {
   const titleEl = document.getElementById('f-title');
   const title = titleEl ? titleEl.value.trim() : '';
+  const linkEl = document.getElementById('f-link');
+  const link = linkEl ? linkEl.value.trim() : '';
+  const cEl = document.getElementById('f-content');
+  const text = cEl ? cEl.value.trim() : '';
   const noteEl = document.getElementById('f-note');
   const note = noteEl ? noteEl.value.trim() : '';
-  let content = '';
 
-  if (state.addType === 'audio') {
-    const blob = recBlob || recFile;
-    if (!blob) { alert('請先錄一段語音，或選一個錄音檔'); return; }
+  const blob = recBlob || recFile;
+  if (!link && !text && !note && !blob && !imgFiles.length) {
+    alert('請至少填一樣：連結、文字、錄音、備註或圖片');
+    return;
+  }
+
+  let audioUrl = '';
+  if (blob) {
     let ext = 'webm', ct = 'audio/webm';
     if (recFile) {
       ct = recFile.type || 'audio/mpeg';
       const m = recFile.name.match(/\.([a-z0-9]+)$/i);
       ext = m ? m[1].toLowerCase() : ((ct.split('/')[1]) || 'mp3');
     }
-    try { content = await uploadBlob(blob, ext, ct); }
+    try { audioUrl = await uploadBlob(blob, ext, ct); }
     catch (e) { alert('語音上傳失敗：' + e.message); return; }
-  } else {
-    const cEl = document.getElementById('f-content');
-    content = cEl ? cEl.value.trim() : '';
-    if (!content && !imgFiles.length && !note) { alert('請至少填一個連結、文字、備註或圖片'); return; }
   }
 
   const urls = [];
@@ -186,12 +190,19 @@ async function addItem() {
     }
   } catch (e) { alert('圖片上傳失敗：' + e.message); return; }
 
+  // 一則靈感只會是一張卡片：type 以「主要內容」判定，其餘全部掛在同一則
+  let type = 'text', content = '';
+  if (link) { type = 'link'; content = link; }
+  else if (text) { type = 'text'; content = text; }
+  else if (audioUrl) { type = 'audio'; content = audioUrl; }
+
   try {
     await api('/api/items', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folder: state.folder, type: state.addType, title, content, note, images: urls }),
+      body: JSON.stringify({ folder: state.folder, type, title, content, link, text, audioUrl, note, images: urls }),
     });
     recBlob = null; recFile = null; imgFiles = [];
+    draft = { title: '', link: '', content: '', note: '' };
     await loadAll();
   } catch (e) { alert('新增失敗：' + e.message); }
 }
@@ -302,54 +313,130 @@ function calSrc() {
   if (!s) return '';
   const m = s.match(/src=["']([^"']+)["']/i);
   if (m) s = m[1];
-  if (s.startsWith('http://')) s = s.replace('http://', 'https://');
-  if (s.includes('calendar.google.com')) s = s.replace('calendar.google.com', 'www.google.com');
-  return s;
+  return s.trim();
+}
+
+function dayKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 function renderCalendar() {
   const el = document.getElementById('view-calendar');
   if (!el) return;
   const src = calSrc();
-  const today = state.tasks.filter((t) => t.due === new Date().toISOString().slice(0, 10));
-  const upcoming = state.tasks.filter((t) => t.status !== 'done' && t.due && t.due >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
 
-  let body = '';
-  if (!src) {
-    body = `<div class="calbox">
-      <div class="sub">還沒接上 Google 行事曆。把行事曆的網址貼進來，就能在這裡直接看到。</div>
-      <div class="field"><label>行事曆網址</label><input id="cal-input" placeholder="貼上 iframe 網址或行事曆網址" value="" /></div>
-      <button class="btn" onclick="saveCal()">儲存並顯示</button>
+  // 有貼網址就顯示「打開」按鈕；內容自己畫，不靠嵌入，才不會白畫面
+  const openBtn = src ? `<div class="row" style="margin-bottom:12px">
+      <a class="btn" href="${esc(src)}" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none">🔗 打開我的 Google 行事曆</a>
+      <button class="btn ghost" onclick="clearCal()">重新設定</button></div>` : '';
+
+  const setup = !src ? `<div class="calbox">
+      <div class="sub">貼上你的 Google 行事曆網址，這裡就會列出你的行程。</div>
+      <div class="field"><label>行事曆網址</label><input id="cal-input" placeholder="貼上行事曆網址（或整段嵌入程式碼）" value="" /></div>
+      <button class="btn" onclick="saveCal()">儲存</button>
       <div class="hint" style="margin-top:14px">
-        <b>怎麼拿網址：</b>電腦開 Google 行事曆 → 左邊你的行事曆旁邊「⋮」→ 設定和共用 → 往下拉找「整合行事曆」→ 複製「嵌入程式碼」那段整包貼進來就好（網站會自動抓網址）。記得該行事曆的權限要設成公開。
+        <b>怎麼拿網址：</b><br>
+        1. 手機或電腦開 Google 行事曆 → 左邊「其他行事曆」找到你的行事曆 → 點旁邊「⋮」<br>
+        2. 選「設定和共用」 → 往下拉找「整合行事曆」<br>
+        3. 複製「日曆網址」那一串（會是 <b>.../ical/.../basic.ics</b> 開頭），或複製整段「嵌入程式碼」貼進來都可以<br>
+        4. 上面的「存取權限」要設成<b>公開</b>
       </div>
-    </div>`;
-  } else {
-    body = `<div class="calbox">
-      <div class="calbtns" style="margin:0 0 10px">
+    </div>` : '';
+  const calModeBtns = src ? `<div class="calbtns" style="margin:0 0 10px">
         <button class="${state.calMode === 'week' ? 'on' : ''}" onclick="setCalMode('week')">本週</button>
         <button class="${state.calMode === 'month' ? 'on' : ''}" onclick="setCalMode('month')">本月</button>
         <button class="${state.calMode === 'agenda' ? 'on' : ''}" onclick="setCalMode('agenda')">清單</button>
-        <button onclick="clearCal()">重新設定</button>
-      </div>
-      <iframe src="${esc(buildCalUrl(src))}" loading="lazy"></iframe>
-    </div>`;
-  }
+      </div>` : '';
 
+  const today = state.tasks.filter((t) => t.due === new Date().toISOString().slice(0, 10));
+  const upcoming = state.tasks.filter((t) => t.status !== 'done' && t.due && t.due >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
   const todayList = today.length ? today.map((t) => `<li>• ${esc(t.title)}</li>`).join('') : '<div class="muted">今天沒有標日期的待辦事項。</div>';
-  const upList = upcoming.length ? upcoming.map((t) => `<li>${esc(t.due.slice(5))} ・ ${esc(t.title)} <span style="color:#9a6f3a;cursor:pointer" onclick="addToCal('${t.id}')">📅</span></li>`).join('') : '<div class="muted">還沒有排日期的待辦事項。</div>';
+  const upList = upcoming.length ? upcoming.map((t) => `<li>${esc(t.due.slice(5))} ・ ${esc(t.title)} <span style="color:#8a6134;cursor:pointer" onclick="addToCal('${t.id}')">📅</span></li>`).join('') : '<div class="muted">還沒有排日期的待辦事項。</div>';
 
   const myTasks = `<div class="exec"><h2>今天的待辦</h2><ul style="margin:0;padding-left:16px">${todayList}</ul></div>
     <div class="exec"><h2>接下來要做的事</h2><ul style="margin:0;padding-left:16px;list-style:none">${upList}</ul></div>`;
 
-  el.innerHTML = body + myTasks;
+  el.innerHTML = setup + openBtn + calModeBtns + `<div id="cal-native"></div>` + myTasks;
+  if (src) drawCalendar();
 }
 
-function buildCalUrl(base) {
-  const mode = state.calMode === 'agenda' ? 'AGENDA' : (state.calMode === 'month' ? 'MONTH' : 'WEEK');
-  const sep = base.includes('?') ? '&' : '?';
-  return base + sep + 'mode=' + mode + '&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0&ctz=Asia%2FTaipei';
+function calRange() {
+  const now = new Date();
+  if (state.calMode === 'agenda') return [now, new Date(now.getTime() + 30 * 864e5)];
+  if (state.calMode === 'month') {
+    const a = new Date(now.getFullYear(), now.getMonth(), 1);
+    const b = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return [a, b];
+  }
+  const a = new Date(now);
+  a.setDate(now.getDate() - now.getDay());
+  const b = new Date(a);
+  b.setDate(a.getDate() + 6);
+  return [a, b];
 }
+
+async function drawCalendar() {
+  const box = document.getElementById('cal-native');
+  if (!box) return;
+  if (!/^https?:/i.test(calSrc())) {
+    box.innerHTML = `<div class="calbox"><div class="sub">網址格式不對，請貼上以 https:// 開頭的行事曆網址。</div></div>`;
+    return;
+  }
+  box.innerHTML = `<div class="calbox"><div class="muted">正在讀取你的行事曆…</div></div>`;
+  try {
+    const r = await fetch('/api/ics?src=' + encodeURIComponent(calSrc()));
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || '讀取失敗');
+    const events = j.events || [];
+    box.innerHTML = calBoard(events);
+  } catch (e) {
+    box.innerHTML = `<div class="calbox"><div class="sub">讀不到你的行事曆（${esc(e.message)}）。<br>
+      常見原因：行事曆權限不是「公開」，或貼到的不是 <b>basic.ics</b> 那條網址。<br>
+      按下面的按鈕可以直接打開 Google 行事曆看行程。</div>
+      ${calSrc() ? `<a class="btn" href="${esc(calSrc())}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">🔗 打開行事曆</a>` : ''}</div>`;
+  }
+}
+
+function calBoard(events) {
+  const [a, b] = calRange();
+  const days = [];
+  if (state.calMode === 'month') {
+    const first = new Date(a);
+    const startPad = new Date(first); startPad.setDate(1 - first.getDay());
+    for (let i = 0; i < 42; i++) { const d = new Date(startPad); d.setDate(startPad.getDate() + i); days.push(d); }
+  } else {
+    for (let i = 0; i < 7; i++) { const d = new Date(a); d.setDate(a.getDate() + i); days.push(d); }
+  }
+  const wk = ['日', '一', '二', '三', '四', '五', '六'];
+  const todayK = dayKey(new Date());
+
+  if (state.calMode === 'agenda') {
+    const inRange = events.filter((e) => e.start && e.start.slice(0, 10) >= dayKey(a) && e.start.slice(0, 10) <= dayKey(b)).sort((x, y) => x.start.localeCompare(y.start));
+    const list = inRange.length ? inRange.map((e) => `<div class="calrow"><b>${esc(e.start.slice(5, 10).replace('-', '/'))}</b> <span>${esc(e.time || '整天')}</span> ${esc(e.title)}</div>`).join('') : '<div class="muted">這 30 天沒有行程。</div>';
+    return `<div class="calbox"><div class="sub">接下來 30 天的行程</div>${list}</div>`;
+  }
+
+  const head = days.slice(0, state.calMode === 'month' ? 7 : 7).map((d) => `<div class="calhead">${wk[d.getDay()]}</div>`).join('');
+  const cells = days.map((d) => {
+    const k = dayKey(d);
+    const evs = events.filter((e) => {
+      const st = (e.start || '').slice(0, 10);
+      if (!st) return false;
+      if (e.allDay) return st <= k && (e.end || st).slice(0, 10) >= k;
+      return st === k;
+    });
+    const dim = state.calMode === 'month' && d.getMonth() !== a.getMonth();
+    const isT = k === todayK;
+    return `<div class="calcell ${dim ? 'dim' : ''} ${isT ? 'today' : ''}">
+      <div class="caldate">${d.getDate()}</div>
+      ${evs.slice(0, 3).map((e) => `<div class="calev" title="${esc(e.title)}">${e.time && e.time !== '整天' ? esc(e.time) + ' ' : ''}${esc(e.title)}</div>`).join('')}
+      ${evs.length > 3 ? `<div class="calmore">+${evs.length - 3}</div>` : ''}
+    </div>`;
+  }).join('');
+  return `<div class="calbox"><div class="sub">${a.getFullYear()} 年 ${a.getMonth() + 1} 月 ${a.getDate()} 日 起</div>
+    <div class="calgrid">${head}${cells}</div></div>`;
+}
+
 function setCalMode(m) { state.calMode = m; renderCalendar(); }
 async function saveCal() {
   const v = document.getElementById('cal-input').value.trim();
@@ -359,6 +446,9 @@ async function saveCal() {
     state.settings = r.settings;
     renderCalendar();
   } catch (e) { alert('儲存失敗：' + e.message); }
+}
+function onCalInput(v) {
+  state.settings = { calendarSrc: v };
 }
 async function clearCal() {
   if (!confirm('要清除行事曆設定嗎？')) return;

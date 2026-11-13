@@ -9,7 +9,7 @@
   :root{
     --bg:#e0f0f5; --card:#ffffff; --card2:#f7fbfc; --line:#dbe6ea;
     --txt:#1a1614; --sub:#7b848a;
-    --sand:#d5b185; --sand-d:#c19a6b; --sand-t:#f3e8da; --sand-ink:#3a2c1e;
+    --sand:#ecd9bf; --sand-d:#dcc4a3; --sand-t:#f7efe4; --sand-ink:#4a3a28;
     --ok:#7d9a6d; --warn:#c05a4d;
   }
   *{box-sizing:border-box}
@@ -36,7 +36,7 @@
   .field{margin-bottom:10px}
   .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:600}
   .row{display:flex;gap:8px;margin-top:8px}
-  .btn{padding:12px 16px;border-radius:11px;border:none;background:var(--sand);color:var(--sand-ink);font-size:15px;cursor:pointer;font-weight:700;transition:.15s}
+  .btn{padding:12px 16px;border-radius:11px;border:1px solid #e2d0b8;background:var(--sand);color:var(--sand-ink);font-size:15px;cursor:pointer;font-weight:700;transition:.15s}
   .btn:hover{background:var(--sand-d)}
   .btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);font-weight:500}
   .btn.ghost:hover{background:var(--sand-t)}
@@ -45,7 +45,7 @@
   .muted{color:var(--sub);font-size:13px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
   .card h3{margin:0 0 7px;font-size:15px;font-weight:700}
-  .card a{color:#9a6f3a;word-break:break-all}
+  .card a{color:#8a6134;word-break:break-all}
   .card audio{width:100%;margin-top:8px;height:38px}
   .card .meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
   .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -82,6 +82,21 @@
   .calbtns button.on{background:var(--sand);color:var(--sand-ink);border-color:var(--sand);font-weight:700}
   .lightbox{position:fixed;inset:0;background:rgba(26,22,20,.82);display:flex;align-items:center;justify-content:center;z-index:99;padding:16px}
   .lightbox img{max-width:100%;max-height:90vh;border-radius:12px}
+
+  .listhead{font-size:13px;color:var(--sub);font-weight:700;margin:18px 2px 10px;letter-spacing:.4px}
+  .card .tag.fold{background:#eef6f8;color:#5b7b86}
+  .card .meta{gap:8px}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .calhead{font-size:11px;color:var(--sub);text-align:center;padding-bottom:2px;font-weight:700}
+  .calcell{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:6px;min-height:78px;overflow:hidden}
+  .calcell.dim{opacity:.4}
+  .calcell.today{border-color:var(--sand-d);background:var(--sand-t)}
+  .caldate{font-size:12px;font-weight:700;color:#5b6b73;margin-bottom:3px}
+  .calev{font-size:10.5px;line-height:1.3;background:#fff;border-radius:6px;padding:2px 4px;margin-bottom:2px;color:#33505b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .calmore{font-size:10px;color:var(--sub)}
+  .calrow{font-size:13px;padding:7px 2px;border-bottom:1px solid var(--line)}
+  .calrow b{color:#8a6134;margin-right:6px}
+  .calrow span{color:var(--sub);margin-right:6px;font-size:12px}
   .hint{background:var(--sand-t);border-radius:12px;padding:12px 14px;font-size:13px;color:#7a5832;line-height:1.7;margin-bottom:14px}
 </style>
 </head>
