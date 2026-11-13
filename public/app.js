@@ -346,7 +346,7 @@ function renderCalendar() {
   const calModeBtns = src ? `<div class="calbtns" style="margin:0 0 10px">
         <button class="${state.calMode === 'week' ? 'on' : ''}" onclick="setCalMode('week')">本週</button>
         <button class="${state.calMode === 'month' ? 'on' : ''}" onclick="setCalMode('month')">本月</button>
-        <button class="${state.calMode === 'agenda' ? 'on' : ''}" onclick="setCalMode('agenda')">清單</button>
+        
       </div>
       ${state.calMode === 'agenda' ? '' : `<div class="calnav">
         <button onclick="calShift(-1)">‹ 上一${state.calMode === 'month' ? '個月' : '週'}</button>
@@ -443,32 +443,74 @@ function calBoard(events) {
   const wk = ['日', '一', '二', '三', '四', '五', '六'];
   const todayK = dayKey(new Date());
 
-  if (state.calMode === 'agenda') {
-    const inRange = events.filter((e) => e.start && e.start.slice(0, 10) >= dayKey(a) && e.start.slice(0, 10) <= dayKey(b)).sort((x, y) => x.start.localeCompare(y.start));
-    const list = inRange.length ? inRange.map((e) => `<div class="calrow"><b>${esc(e.start.slice(5, 10).replace('-', '/'))}</b> <span>${esc(e.time || '整天')}</span> ${esc(e.title)}</div>`).join('') : '<div class="muted">這 30 天沒有行程。</div>';
-    return `<div class="calbox"><div class="sub">接下來 30 天的行程</div>${list}</div>`;
-  }
+  // 先把行程按日期分好（一次算完，避免每格重複比對出錯）
+  const byDay = {};
+  (events || []).forEach((e) => {
+    const st = String(e.start || '').slice(0, 10);
+    if (!st) return;
+    if (!String(e.title || '').trim()) return;
+    let en = String(e.end || st).slice(0, 10);
+    if (en < st) en = st;
+    // 保險：最長只佔 60 天，避免規則錯誤導致整月被塞滿
+    let d = st, guard = 0;
+    while (d <= en && guard < 60) {
+      (byDay[d] = byDay[d] || []).push(e);
+      d = addDaysJs(d, 1);
+      guard += 1;
+    }
+  });
+  Object.keys(byDay).forEach((k) => byDay[k].sort((x, y) => String(x.time).localeCompare(String(y.time))));
 
-  const head = days.slice(0, state.calMode === 'month' ? 7 : 7).map((d) => `<div class="calhead">${wk[d.getDay()]}</div>`).join('');
+  const head = days.slice(0, 7).map((d) => `<div class="calhead">${wk[d.getDay()]}</div>`).join('');
   const cells = days.map((d) => {
     const k = dayKey(d);
-    const evs = events.filter((e) => {
-      if (state.hideNoTitle && !String(e.title || '').trim()) return false;
-      const st = (e.start || '').slice(0, 10);
-      if (!st) return false;
-      if (e.allDay) return st <= k && (e.end || st).slice(0, 10) >= k;
-      return st === k;
-    });
+    const evs = byDay[k] || [];
     const dim = state.calMode === 'month' && d.getMonth() !== a.getMonth();
     const isT = k === todayK;
-    return `<div class="calcell ${dim ? 'dim' : ''} ${isT ? 'today' : ''}">
-      <div class="caldate">${d.getDate()}${d.getDate() === 1 || (days.indexOf(d) === 0) ? ' <span class="calmon">' + (d.getMonth() + 1) + '月</span>' : ''}</div>
+    const firstOfMonth = d.getDate() === 1 || d.getTime() === days[0].getTime();
+    return `<div class="calcell ${dim ? 'dim' : ''} ${isT ? 'today' : ''}" onclick="showDay('${k}')">
+      <div class="caldate">${d.getDate()}${firstOfMonth ? ' <span class="calmon">' + (d.getMonth() + 1) + '月</span>' : ''}</div>
       ${evs.slice(0, 4).map((e) => `<div class="calev" title="${esc(e.title)}">${e.time && e.time !== '整天' ? esc(e.time) + ' ' : ''}${esc(e.title)}</div>`).join('')}
-      ${evs.length > 4 ? `<div class="calmore" onclick="showDay('${k}')">還有 ${evs.length - 4} 筆…</div>` : ''}
+      ${evs.length > 4 ? `<div class="calmore">還有 ${evs.length - 4} 筆…</div>` : ''}
     </div>`;
   }).join('');
-  return `<div class="calbox"><div class="sub">${a.getFullYear()} 年 ${a.getMonth() + 1} 月 ${a.getDate()} 日 起</div>
-    <div class="calgrid">${head}${cells}</div></div>`;
+
+  const label = state.calMode === 'month'
+    ? `${a.getFullYear()} 年 ${a.getMonth() + 1} 月`
+    : `${a.getMonth() + 1}/${a.getDate()} ～ ${b.getMonth() + 1}/${b.getDate()}`;
+  const listBtn = `<div class="calnav" style="margin:0 0 10px"><button onclick="setCalMode('agenda')">📋 全部行程清單</button></div>`;
+  return `<div class="calbox"><div class="sub">${label}${state.calOffset ? '' : '（本月）'}</div>
+    <div class="calgrid">${head}${cells}</div></div>` + listBtn + calAgendaList(events);
+}
+
+function addDaysJs(iso, n) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return dayKey(d);
+}
+
+function calAgendaList(events) {
+  const months = {};
+  const today = dayKey(new Date());
+  (events || [])
+    .filter((e) => e.start && String(e.title || '').trim() && String(e.start).slice(0, 10) >= addDaysJs(today, -7))
+    .sort((x, y) => (x.start + (x.time || '')).localeCompare(y.start + (y.time || '')))
+    .forEach((e) => {
+      const k = String(e.start).slice(0, 7);
+      (months[k] = months[k] || []).push(e);
+    });
+  const keys = Object.keys(months).sort();
+  if (!keys.length) return '<div class="calbox"><div class="muted">目前沒有行程。</div></div>';
+  const rows = keys.map((k) => {
+    const [y, m] = k.split('-');
+    const items = months[k].map((e) => {
+      const d = String(e.start).slice(8, 10);
+      const span = e.end && e.end !== e.start ? ` ～ ${String(e.end).slice(5, 10).replace('-', '/')}` : '';
+      return `<div class="calrow"><b>${d}</b><span>${esc(e.time || '整天')}${esc(span)}</span>${esc(e.title)}</div>`;
+    }).join('');
+    return `<div class="calmonth"><h4>${y} 年 ${Number(m)} 月 <span class="muted">(${months[k].length})</span></h4>${items}</div>`;
+  }).join('');
+  return `<div class="calbox"><div class="sub">全部行程（依月份）</div>${rows}</div>`;
 }
 
 function setCalSrc(k) { state.calSrcKind = k; renderCalendar(); }
