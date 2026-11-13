@@ -1,7 +1,7 @@
 const FOLDERS = ['影片靈感', '文案點子', '語音備忘', '想拍的影片', '新歌靈感'];
 const STATUS = { todo: '待辦事項', doing: '正在處理', done: '已完成' };
 const DOT = { todo: '#d5b185', doing: '#7fa3b2', done: '#7d9a6d' };
-let state = { items: [], tasks: [], settings: { calendarSrc: '' }, folder: FOLDERS[0], addType: 'link', calMode: 'week' };
+let state = { items: [], tasks: [], settings: { calendarSrc: '' }, folder: FOLDERS[0], addType: 'link', calMode: 'week', calOffset: 0 };
 let recorder = null, recChunks = [], recBlob = null, recFile = null;
 let imgFiles = [];
 let draft = { title: '', link: '', content: '', note: '' };
@@ -60,7 +60,7 @@ function addForm() {
   const psrc = recBlob ? URL.createObjectURL(recBlob) : (recFile ? URL.createObjectURL(recFile) : '');
   const preview = psrc ? `<audio controls src="${psrc}"></audio>` : '<div class="muted">按「開始錄音」直接錄，或選一個已經錄好的檔案上傳。</div>';
   const audioField = `<div class="field"><label>錄音 / 語音</label>
-      <div class="row"><button class="btn ghost rec" id="rec-btn" onclick="toggleRec()" style="flex:1">${recorder && recorder.state === 'recording' ? '■ 停止錄音' : '● 開始錄音'}</button></div>
+      <div class="row"><button class="btn ghost rec" id="rec-btn" onclick="toggleRec()" style="flex:1;font-size:14px;font-weight:500;padding:12px">${recorder && recorder.state === 'recording' ? '⏹ 停止錄音' : '🎙 開始錄音'}</button></div>
       <div class="row"><label class="btn ghost" style="flex:1;text-align:center;cursor:pointer;margin:0">📁 上傳錄音檔<input type="file" accept="audio/*" style="display:none" onchange="pickFile(this)" /></label></div>
       <div style="margin-top:10px">${preview}</div></div>`;
 
@@ -131,7 +131,7 @@ async function toggleRec() {
       renderIdeas();
     };
     recorder.start();
-    btn.textContent = '■ 停止錄音';
+    btn.textContent = '⏹ 停止錄音';
     btn.style.background = '#ecd9bf';
     btn.style.color = '#4a3a28';
   } catch (e) {
@@ -347,7 +347,12 @@ function renderCalendar() {
         <button class="${state.calMode === 'week' ? 'on' : ''}" onclick="setCalMode('week')">本週</button>
         <button class="${state.calMode === 'month' ? 'on' : ''}" onclick="setCalMode('month')">本月</button>
         <button class="${state.calMode === 'agenda' ? 'on' : ''}" onclick="setCalMode('agenda')">清單</button>
-      </div>` : '';
+      </div>
+      ${state.calMode === 'agenda' ? '' : `<div class="calnav">
+        <button onclick="calShift(-1)">‹ 上一${state.calMode === 'month' ? '個月' : '週'}</button>
+        <button onclick="calShift(0);state.calOffset=0;renderCalendar()">今天</button>
+        <button onclick="calShift(1)">下一${state.calMode === 'month' ? '個月' : '週'} ›</button>
+      </div>`}` : '';
 
   const today = state.tasks.filter((t) => t.due === new Date().toISOString().slice(0, 10));
   const upcoming = state.tasks.filter((t) => t.status !== 'done' && t.due && t.due >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
@@ -363,14 +368,15 @@ function renderCalendar() {
 
 function calRange() {
   const now = new Date();
+  const off = state.calOffset || 0;
   if (state.calMode === 'agenda') return [now, new Date(now.getTime() + 30 * 864e5)];
   if (state.calMode === 'month') {
-    const a = new Date(now.getFullYear(), now.getMonth(), 1);
-    const b = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const a = new Date(now.getFullYear(), now.getMonth() + off, 1);
+    const b = new Date(now.getFullYear(), now.getMonth() + off + 1, 0);
     return [a, b];
   }
   const a = new Date(now);
-  a.setDate(now.getDate() - now.getDay());
+  a.setDate(now.getDate() - now.getDay() + off * 7);
   const b = new Date(a);
   b.setDate(a.getDate() + 6);
   return [a, b];
@@ -438,7 +444,8 @@ function calBoard(events) {
     <div class="calgrid">${head}${cells}</div></div>`;
 }
 
-function setCalMode(m) { state.calMode = m; renderCalendar(); }
+function setCalMode(m) { state.calMode = m; state.calOffset = 0; renderCalendar(); }
+function calShift(n) { state.calOffset += n; renderCalendar(); }
 async function saveCal() {
   const v = document.getElementById('cal-input').value.trim();
   if (!v) { alert('請先貼上行事曆網址'); return; }
