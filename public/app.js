@@ -71,7 +71,7 @@ function addForm() {
     <label class="btn ghost" style="display:block;text-align:center;cursor:pointer;margin:0">📷 上傳截圖<input type="file" accept="image/*" multiple style="display:none" onchange="pickImages(this)" /></label>
     ${thumbs ? `<div class="thumbs">${thumbs}</div><div class="muted" style="margin-top:6px">點圖片可移除</div>` : ''}</div>`;
 
-  return titleField + linkField + textField + audioField + noteField + imgField +
+  return titleField + linkField + textField + noteField + audioField + imgField +
     `<div class="row"><button class="btn" onclick="addItem()" style="flex:1">➕ 加到「${state.folder}」</button></div>`;
 }
 
