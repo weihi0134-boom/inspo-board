@@ -27,6 +27,77 @@ function toDateInfo(v, p) {
   return { start: iso, end: iso, time: `${hh}:${mm}`, allDay: false };
 }
 
+const pad2 = (n) => String(n).padStart(2, '0');
+const addDays = (iso, n) => {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+const fmt = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+// 把「重複行程」展開成每一次（Google 的 .ics 裡重複只給一條規則）
+function expand(rrule, startIso, allDay, limitMonths = 14) {
+  const out = [];
+  const m = {};
+  String(rrule || '').split(';').forEach((kv) => { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i).toUpperCase()] = kv.slice(i + 1); });
+  const freq = (m.FREQ || '').toUpperCase();
+  const interval = Math.max(1, parseInt(m.INTERVAL || '1', 10) || 1);
+  const count = m.COUNT ? parseInt(m.COUNT, 10) : 0;
+  const until = m.UNTIL ? String(m.UNTIL).slice(0, 8) : '';
+  const untilIso = until ? `${until.slice(0, 4)}-${until.slice(4, 6)}-${until.slice(6, 8)}` : '';
+  const now = new Date();
+  const horizon = new Date(now.getFullYear(), now.getMonth() + limitMonths, 1);
+  const horizonIso = fmt(horizon);
+
+  const dates = [];
+  const base = new Date(startIso + 'T00:00:00');
+  if (freq === 'WEEKLY') {
+    const byday = (m.BYDAY || '').split(',').map((x) => x.trim().toUpperCase()).filter(Boolean);
+    const map = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+    const wkStart = new Date(base);
+    wkStart.setDate(base.getDate() - base.getDay());
+    let week = 0;
+    while (week < 400) {
+      const wkBase = new Date(wkStart);
+      wkBase.setDate(wkStart.getDate() + week * 7 * interval);
+      if (wkBase > horizon) break;
+      const offsets = byday.length ? byday.map((d) => map[d.slice(-2)]).filter((n) => n !== undefined) : [base.getDay()];
+      offsets.sort((a, b) => a - b);
+      for (const off of offsets) {
+        const d = new Date(wkBase);
+        d.setDate(wkBase.getDate() + off);
+        if (d < base) continue;
+        const iso = fmt(d);
+        if (untilIso && iso > untilIso) return finish(dates, count);
+        if (iso > horizonIso) return finish(dates, count);
+        dates.push(iso);
+        if (count && dates.length >= count) return finish(dates, count);
+      }
+      week += 1;
+    }
+  } else {
+    const stepDays = freq === 'DAILY' ? interval : (freq === 'MONTHLY' ? 0 : 7 * interval);
+    let cur = new Date(base);
+    let i = 0;
+    while (i < 400) {
+      if (cur > horizon) break;
+      const iso = fmt(cur);
+      if (untilIso && iso > untilIso) break;
+      dates.push(iso);
+      if (count && dates.length >= count) break;
+      if (freq === 'MONTHLY') cur = new Date(cur.getFullYear(), cur.getMonth() + interval, cur.getDate());
+      else if (stepDays) { cur = new Date(cur); cur.setDate(cur.getDate() + stepDays); }
+      else break;
+      i += 1;
+    }
+  }
+  return finish(dates, count);
+}
+
+function finish(dates, count) {
+  return count ? dates.slice(0, count) : dates;
+}
+
 function parseIcs(text) {
   const unfolded = text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '').replace(/\r/g, '');
   const lines = unfolded.split('\n');
@@ -60,6 +131,7 @@ function parseIcs(text) {
     if (name === 'DTSTART') { cur.DTSTART = value; cur.DTSTART_PARAM = left; }
     else if (name === 'DTEND') { cur.DTEND = value; cur.DTEND_PARAM = left; }
     else if (name === 'SUMMARY') { cur.SUMMARY = value; }
+    else if (name === 'RRULE') { cur.RRULE = value; }
   }
   return events;
 }
@@ -119,7 +191,7 @@ export default async function handler(req, res) {
         const events = parseIcs(text);
         events.sort((a, b) => (a.start + a.time).localeCompare(b.start + b.time));
         res.setHeader('Cache-Control', 's-maxage=60');
-        res.status(200).json({ name: calName, events: events.slice(0, 500), count: events.length, used: u });
+        res.status(200).json({ name: calName, events, count: events.length, used: u });
         return;
       } catch (e) {
         lastErr = String((e && e.message) || e);
