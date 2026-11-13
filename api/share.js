@@ -41,7 +41,16 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       let body = {};
-      try { body = await readJson(req); } catch (e) { body = {}; }
+      const ctype = String(req.headers['content-type'] || '');
+      if (/application\/json/i.test(ctype)) {
+        try { body = await readJson(req); } catch (e) { body = {}; }
+      } else {
+        // 瀏覽器表單送來的是 urlencoded
+        const chunks = [];
+        for await (const c of req) chunks.push(c);
+        const qs = new URLSearchParams(Buffer.concat(chunks).toString('utf8'));
+        body = { title: qs.get('title') || '', content: qs.get('content') || '', folder: qs.get('folder') || '' };
+      }
       let title = String(body.title || '').slice(0, 200);
       const content = String(body.content || body.text || body.url || '').slice(0, 4000);
       const folder = FOLDERS.includes(body.folder) ? body.folder : FOLDERS[0];
