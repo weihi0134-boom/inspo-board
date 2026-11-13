@@ -38,7 +38,15 @@ function parseIcs(text) {
       if (cur && cur.SUMMARY) {
         const s = toDateInfo(cur.DTSTART, cur.DTSTART_PARAM);
         const e = toDateInfo(cur.DTEND, cur.DTEND_PARAM);
-        if (s) events.push({ title: unescapeIcs(cur.SUMMARY).slice(0, 120), start: s.start, end: (e && e.end) || s.end, time: s.time, allDay: !!s.allDay });
+        // 全天活動的 DTEND 是「不含當天」，要減一天才不會多佔一格
+        let end = (e && e.end) || s.end;
+        if (s.allDay && e && e.end) {
+          const d = new Date(e.end + 'T00:00:00');
+          d.setDate(d.getDate() - 1);
+          const base = new Date(s.start + 'T00:00:00');
+          end = d >= base ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : s.start;
+        }
+        events.push({ title: unescapeIcs(cur.SUMMARY).slice(0, 120), start: s.start, end, time: s.time, allDay: !!s.allDay });
       }
       cur = null;
       continue;
@@ -106,10 +114,12 @@ export default async function handler(req, res) {
         if (!r.ok) { lastErr = 'Google 回覆 ' + r.status + (r.status === 404 ? '，通常是這個行事曆沒有公開' : '，請確認權限已設為公開'); continue; }
         const text = await r.text();
         if (!/BEGIN:VCALENDAR/i.test(text)) { lastErr = '抓到的不是行事曆資料，請確認貼的是 basic.ics 那一條網址'; continue; }
+        const nameM = text.match(/X-WR-CALNAME:(.+)/i);
+        const calName = nameM ? unescapeIcs(nameM[1]).slice(0, 60) : '';
         const events = parseIcs(text);
         events.sort((a, b) => (a.start + a.time).localeCompare(b.start + b.time));
         res.setHeader('Cache-Control', 's-maxage=60');
-        res.status(200).json({ events: events.slice(0, 500), count: events.length, used: u });
+        res.status(200).json({ name: calName, events: events.slice(0, 500), count: events.length, used: u });
         return;
       } catch (e) {
         lastErr = String((e && e.message) || e);
