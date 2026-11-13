@@ -363,7 +363,10 @@ function renderCalendar() {
       </div>`}` : '';
 
   const today = state.tasks.filter((t) => t.due === new Date().toISOString().slice(0, 10));
-  const upcoming = state.tasks.filter((t) => t.status !== 'done' && t.due && t.due >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  today.forEach((t) => seen.add(t.id));
+  const upcoming = state.tasks.filter((t) => t.status !== 'done' && t.due && t.due > todayStr && !seen.has(t.id)).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
+  const seen = new Set();
   const todayList = today.length ? today.map((t) => `<li>• ${esc(t.title)}</li>`).join('') : '<div class="muted">今天沒有標日期的待辦事項。</div>';
   const upList = upcoming.length ? upcoming.map((t) => `<li>${esc(t.due.slice(5))} ・ ${esc(t.title)} <span style="color:#8a6134;cursor:pointer" onclick="addToCal('${t.id}')">📅</span></li>`).join('') : '<div class="muted">還沒有排日期的待辦事項。</div>';
 
@@ -374,7 +377,8 @@ function renderCalendar() {
       <button class="${state.calSrcKind === 'main' ? 'on' : ''}" onclick="setCalSrc('main')">我的行事曆</button>
       <button class="${state.calSrcKind === 'holiday' ? 'on' : ''}" onclick="setCalSrc('holiday')">台灣假日 🇹🇼</button>
     </div>` : '';
-  el.innerHTML = setup + openBtn + srcSw + calModeBtns + `<div id="cal-native"></div>` + myTasks;
+  // 順序：今天的待辦 → 接下來要做的事 → 📋 全部行程清單（日曆在最下方）
+  el.innerHTML = setup + openBtn + srcSw + myTasks + calModeBtns + `<div id="cal-native"></div>`;
   if (src) drawCalendar();
 }
 
@@ -567,64 +571,87 @@ async function clearCal() {
 loadAll();
 
 /* ===== 小黑貓 ===== */
-const CAT_W = 64;
-function catMoveTo(x) {
-  const svg = document.getElementById('cat-run');
-  if (!svg) return;
-  svg.style.transform = `translateX(${x}px)`;
+const CAT_W = 80;
+const CAT_ACTIONS = ['stretch', 'groom', 'yawn', 'look', 'tailchase', 'sit', 'sleep', 'walk', 'walk'];
+
+function catEl() { return document.getElementById('cat-run'); }
+function catX() {
+  const svg = catEl();
+  if (!svg) return 0;
+  const m = svg.style.transform.match(/translateX\(([-\d.]+)px\)/);
+  return m ? parseFloat(m[1]) : 0;
 }
-function catState(st) {
-  const svg = document.getElementById('cat-run');
-  const zzz = document.getElementById('cat-zzz');
+function catFace(dirLeft) {
+  const svg = catEl();
   if (!svg) return;
-  const facingLeft = svg.dataset.left === '1';
-  const scale = facingLeft ? -1 : 1;
-  svg.style.setProperty('--flip', scale);
-  svg.classList.remove('walk', 'sleep');
-  zzz.classList.remove('on');
   const body = svg.querySelector('#cat-body');
-  body.setAttribute('transform', scale < 0 ? 'translate(64,0) scale(-1,1)' : '');
-  if (st === 'walk') svg.classList.add('walk');
-  if (st === 'sleep') { svg.classList.add('sleep'); zzz.classList.add('on'); }
-  if (st === 'stretch') {
-    body.style.transformOrigin = '50% 100%';
-    body.style.animation = 'stretch 1.8s ease-in-out';
-    setTimeout(() => { body.style.animation = ''; }, 1900);
-  }
-  if (st === 'groom') {
-    body.style.animation = 'groomNod .5s ease-in-out 4';
-    setTimeout(() => { body.style.animation = ''; }, 2100);
-  }
-  if (st === 'yawn') {
-    svg.querySelectorAll('.eye').forEach((e) => { e.setAttribute('ry', '0.8'); });
-    setTimeout(() => svg.querySelectorAll('.eye').forEach((e) => e.setAttribute('ry', '2.6')), 1400);
-  }
+  body.setAttribute('transform', dirLeft ? 'translate(80,0) scale(-1,1)' : '');
+}
+function catSetState(st) {
+  const svg = catEl();
+  if (!svg) return;
+  svg.classList.remove('walk', 'sleep', 'stretch', 'groom', 'yawn', 'pet', 'sit');
+  document.getElementById('cat-zzz').classList.remove('on');
+  if (st) svg.classList.add(st);
+  if (st === 'sleep') document.getElementById('cat-zzz').classList.add('on');
 }
 function catWalk() {
   if (!catOn) return;
-  const svg = document.getElementById('cat-run');
+  const svg = catEl();
   if (!svg) return;
-  const maxX = Math.max(20, window.innerWidth - CAT_W - 8);
-  const target = Math.random() * maxX;
-  const cur = parseFloat((svg.style.transform.match(/translateX\(([-\d.]+)px\)/) || [0, 0])[1]) || 0;
-  svg.dataset.left = target < cur ? '1' : '0';
-  const dur = Math.min(14, Math.max(4, Math.abs(target - cur) / 90));
+  if (Math.random() < 0.25) catFace(true); // 偶爾先轉身
+  const maxX = Math.max(20, window.innerWidth - CAT_W - 6);
+  const target = Math.max(4, Math.random() * maxX);
+  const cur = catX();
+  const dirLeft = target < cur;
+  catFace(dirLeft);
+  const dist = Math.abs(target - cur);
+  const dur = Math.min(13, Math.max(3.5, dist / 85));
   svg.style.transitionDuration = dur + 's';
-  svg.style.transitionTimingFunction = 'linear';
-  catState('walk');
-  catMoveTo(target);
+  catSetState('walk');
+  svg.style.transform = `translateX(${target}px)`;
   const zzz = document.getElementById('cat-zzz');
-  zzz.style.left = target + 30 + 'px';
-  catTimer = setTimeout(catIdle, dur * 1000 + 300);
+  const hint = document.getElementById('cat-hint');
+  zzz.style.left = (target + 26) + 'px';
+  hint.style.left = (target + 8) + 'px';
+  clearTimeout(catTimer);
+  catTimer = setTimeout(catIdle, dur * 1000 + 250);
 }
 function catIdle() {
   if (!catOn) return;
-  const actions = ['stretch', 'groom', 'yawn', 'sit', 'sleep', 'sit', 'walk'];
-  const st = actions[Math.floor(Math.random() * actions.length)];
+  const st = CAT_ACTIONS[Math.floor(Math.random() * CAT_ACTIONS.length)];
   if (st === 'walk') { catWalk(); return; }
-  catState(st);
-  const wait = st === 'sleep' ? 9000 : 2600 + Math.random() * 1800;
-  catTimer = setTimeout(catWalk, wait);
+  catSetState(st);
+  let wait = 2400 + Math.random() * 1800;
+  if (st === 'sleep') wait = 8000 + Math.random() * 4000;
+  if (st === 'stretch' || st === 'groom' || st === 'yawn') wait = 2200;
+  if (st === 'tailchase') wait = 2600;
+  clearTimeout(catTimer);
+  catTimer = setTimeout(() => { catSetState(''); catWalk(); }, wait);
+}
+/* 嚕貓：點一下貓咪 */
+function catPet(e) {
+  if (e) e.stopPropagation();
+  const svg = catEl();
+  if (!svg) return;
+  clearTimeout(catTimer);
+  catSetState('pet');
+  const x = catX();
+  const stage = document.getElementById('cat-stage');
+  const heart = document.createElement('div');
+  heart.className = 'cat-heart';
+  heart.textContent = ['♡', '♥', '～♡'][Math.floor(Math.random() * 3)];
+  heart.style.left = (x + 30 + Math.random() * 16) + 'px';
+  heart.style.bottom = '52px';
+  stage.appendChild(heart);
+  requestAnimationFrame(() => heart.classList.add('on'));
+  setTimeout(() => heart.remove(), 1000);
+  const hint = document.getElementById('cat-hint');
+  hint.textContent = ['呼嚕呼嚕…', '好舒服～', '再摸一下', '喵～'][Math.floor(Math.random() * 4)];
+  hint.style.left = (x + 6) + 'px';
+  hint.classList.add('on');
+  setTimeout(() => hint.classList.remove('on'), 1400);
+  catTimer = setTimeout(() => { catSetState(''); catIdle(); }, 1700);
 }
 function toggleCat() {
   catOn = !catOn;
@@ -633,11 +660,19 @@ function toggleCat() {
   if (stage) stage.style.display = catOn ? '' : 'none';
   if (badge) badge.textContent = catOn ? '🐈 小貓' : '🐈 叫小貓出來';
   clearTimeout(catTimer);
-  if (catOn) { catState('sit'); catTimer = setTimeout(catWalk, 1500); }
+  if (catOn) { catSetState('sit'); catTimer = setTimeout(catWalk, 1200); }
 }
 function startCat() {
-  if (!document.getElementById('cat-run')) return;
+  const svg = catEl();
+  if (!svg) return;
+  svg.addEventListener('click', catPet);
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  catMoveTo(Math.min(60, window.innerWidth - CAT_W - 10));
-  catTimer = setTimeout(catWalk, 2000);
+  svg.style.transitionDuration = '0s';
+  svg.style.transform = `translateX(${Math.min(50, window.innerWidth - CAT_W - 8)}px)`;
+  const hint = document.getElementById('cat-hint');
+  hint.style.left = '58px';
+  hint.classList.add('on');
+  setTimeout(() => hint.classList.remove('on'), 2600);
+  clearTimeout(catTimer);
+  catTimer = setTimeout(catWalk, 2400);
 }

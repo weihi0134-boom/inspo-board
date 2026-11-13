@@ -120,33 +120,73 @@
   .calrow b{color:#8a6134;margin-right:6px}
   .calrow span{color:var(--sub);margin-right:6px;font-size:12px}
 
-  /* ===== 品牌標題（IG 輸入中動畫） ===== */
-  .brand{font-size:19px;letter-spacing:.6px}
-  .typing{display:inline-flex;align-items:center;gap:4px;margin-left:2px;padding:6px 10px;background:#fff;border:1px solid var(--line);border-radius:999px}
+  /* ===== 品牌標題：小薇固定，正在輸入中會跳 ===== */
+  .brand{font-size:19px;letter-spacing:.6px;gap:2px}
+  .brand .name-static{font-weight:800}
+  .wobble{display:inline-flex;align-items:flex-end;font-weight:700}
+  .wobble span{display:inline-block;transform-origin:50% 100%;animation:hop 1.5s ease-in-out infinite}
+  .wobble span:nth-child(1){animation-delay:0s}
+  .wobble span:nth-child(2){animation-delay:.09s}
+  .wobble span:nth-child(3){animation-delay:.18s}
+  .wobble span:nth-child(4){animation-delay:.27s}
+  .wobble span:nth-child(5){animation-delay:.36s}
+  .wobble .dots-txt{animation-delay:.45s}
+  @keyframes hop{
+    0%,55%,100%{transform:translateY(0) scaleY(1)}
+    18%{transform:translateY(-3px) scaleY(1.06)}
+    32%{transform:translateY(0) scaleY(.93)}
+  }
+  .typing{display:inline-flex;align-items:center;gap:4px;margin-left:4px;padding:7px 11px;background:#fff;border:1px solid var(--line);border-radius:999px;box-shadow:0 1px 2px rgba(26,22,20,.05)}
   .typing i{width:6px;height:6px;border-radius:50%;background:#9aa7ad;display:block;animation:typing 1.35s infinite ease-in-out}
   .typing i:nth-child(2){animation-delay:.18s}
   .typing i:nth-child(3){animation-delay:.36s}
-  @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-4px);opacity:1}}
+  @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-4px);opacity:1}}
   @media(prefers-reduced-motion:reduce){.typing i{animation:none;opacity:.7}.cat-stage,#cat-run{display:none!important}}
 
   /* ===== 小黑貓 ===== */
   .cat-stage{position:fixed;left:0;right:0;bottom:0;height:0;pointer-events:none;z-index:8}
-  .cat-stage svg{position:absolute;bottom:0;width:64px;height:64px;transform:translateX(0);transition:transform .9s cubic-bezier(.45,.05,.55,.95);overflow:visible}
-  .cat-stage svg.walk .leg{animation:legA .42s infinite alternate ease-in-out}
-  .cat-stage svg.walk .leg.b{animation-name:legB}
-  @keyframes legA{from{transform:rotate(0)}to{transform:rotate(16deg)}}
-  @keyframes legB{from{transform:rotate(0)}to{transform:rotate(-16deg)}}
-  .cat-stage svg .tail{transform-origin:0 0;animation:tailWag 1.6s infinite ease-in-out}
-  @keyframes tailWag{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(12deg)}}
-  .cat-stage svg .eye{transition:transform .1s}
-  .cat-stage svg.sleep .eye{transform:scaleY(.12)}
-  .cat-stage svg .blink{animation:blink 5s infinite}
-  @keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
-  .cat-stage svg .stretch{transform-origin:50% 100%;animation:stretch 1.8s ease-in-out}
-  @keyframes stretch{0%,100%{transform:scaleX(1) scaleY(1)}45%{transform:scaleX(1.16) scaleY(.88)}}
-  .cat-zzz{position:absolute;bottom:56px;font-size:13px;color:#7b848a;opacity:0;transition:opacity .4s;pointer-events:none}
+  .cat-stage svg{position:absolute;bottom:2px;width:80px;height:60px;filter:drop-shadow(0 2px 3px rgba(26,22,20,.18));transform:translateX(0);transition:transform .9s linear;overflow:visible;pointer-events:auto;cursor:pointer}
+  /* 走路：四隻腳交錯擺動（對整隻腳含腳掌一起轉） */
+  .cat-stage svg.walk .leg.lf{animation:legF .48s infinite alternate ease-in-out}
+  .cat-stage svg.walk .leg.rb{animation:legF .48s infinite alternate ease-in-out}
+  .cat-stage svg.walk .leg.rf{animation:legB .48s infinite alternate-reverse ease-in-out}
+  .cat-stage svg.walk .leg.lb{animation:legB .48s infinite alternate-reverse ease-in-out}
+  @keyframes legF{from{transform:rotate(0)}to{transform:rotate(15deg)}}
+  @keyframes legB{from{transform:rotate(0)}to{transform:rotate(-15deg)}}
+  .cat-stage svg.walk #cat-body{animation:bob .24s infinite alternate ease-in-out}
+  @keyframes bob{from{transform:translateY(0)}to{transform:translateY(-1.3px)}}
+  /* 尾巴 */
+  .cat-stage svg .tail{transform-origin:22px 46px;animation:tailWag 1.8s infinite ease-in-out}
+  @keyframes tailWag{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(11deg)}}
+  /* 眨眼、睡覺 */
+  .cat-stage svg .eye{transition:transform .12s;transform-origin:center}
+  .cat-stage svg.sleep .eye{transform:scaleY(.1)}
+  .cat-stage svg.blink .eye{animation:blink 4.6s infinite}
+  @keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+  /* 伸懶腰：身體拉長、前腳伸直 */
+  .cat-stage svg.stretch #cat-body{transform-origin:50% 100%;animation:stretch 1.9s ease-in-out}
+  @keyframes stretch{0%,100%{transform:scale(1,1)}45%{transform:scale(1.14,.86)}}
+  /* 梳毛：低頭蹭 */
+  .cat-stage svg.groom #cat-body{transform-origin:57px 34px;animation:groom .55s ease-in-out 4}
+  @keyframes groom{0%,100%{transform:rotate(0)}50%{transform:rotate(15deg) translate(1px,3px)}}
+  /* 打哈欠：頭微仰、嘴開 */
+  .cat-stage svg.yawn #cat-body{animation:yawnHead 1.6s ease-in-out}
+  @keyframes yawnHead{0%,100%{transform:translateY(0)}45%{transform:translateY(-2px) rotate(-6deg)}}
+  /* 被嚕：瞇眼、整隻縮一下、頭蹭手 */
+  .cat-stage svg.pet #cat-body{transform-origin:50% 100%;animation:petSquash .5s ease-in-out 2}
+  @keyframes petSquash{0%,100%{transform:scale(1,1)}50%{transform:scale(1.05,.94) translateY(1px)}}
+  .cat-stage svg.pet .eye{transform:scaleY(.25)}
+  .cat-stage svg.sit #cat-body{animation:sitSway 2.4s infinite ease-in-out}
+  @keyframes sitSway{0%,100%{transform:rotate(0)}50%{transform:rotate(-2deg)}}
+  .cat-stage svg.pet #cat-body{animation:purr .35s ease-in-out 3}
+  @keyframes purr{0%,100%{transform:rotate(0)}50%{transform:rotate(-7deg) translateY(-1px)}}
+  .cat-hint{position:absolute;bottom:56px;font-size:11px;color:#7b848a;background:#fff;border:1px solid #dbe6ea;border-radius:999px;padding:3px 9px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+  .cat-hint.on{opacity:1}
+  .cat-zzz{position:absolute;bottom:54px;font-size:13px;color:#7b848a;opacity:0;transition:opacity .4s;pointer-events:none}
   .cat-zzz.on{opacity:1;animation:zzz 2.4s infinite ease-in-out}
   @keyframes zzz{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-9px);opacity:1}}
+  .cat-heart{position:absolute;font-size:13px;opacity:0;pointer-events:none;transition:all .8s ease-out}
+  .cat-heart.on{opacity:1;transform:translateY(-26px)}
   .cat-badge{position:fixed;right:12px;bottom:10px;z-index:9;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--sub);cursor:pointer;backdrop-filter:blur(6px)}
   .hint{background:var(--sand-t);border-radius:12px;padding:12px 14px;font-size:13px;color:#7a5832;line-height:1.7;margin-bottom:14px}
 </style>
@@ -154,7 +194,9 @@
 <body>
 <header>
   <div class="wrap">
-    <h1 class="brand">小薇正在輸入中<span class="typing"><i></i><i></i><i></i></span></h1>
+    <h1 class="brand">
+      <span class="name-static">小薇</span><span class="wobble"><span>正</span><span>在</span><span>輸</span><span>入</span><span>中</span><span class="dots-txt">...</span></span><span class="typing"><i></i><i></i><i></i></span>
+    </h1>
     <div class="cat-badge" onclick="toggleCat()">🐈 小貓</div>
     <div class="tabs">
       <div class="tab active" data-view="ideas" onclick="switchView('ideas')">💡 靈感</div>
@@ -171,17 +213,61 @@
 
 <div class="cat-stage" id="cat-stage">
   <div class="cat-zzz" id="cat-zzz">z z Z</div>
-  <svg id="cat-run" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <div class="cat-hint" id="cat-hint">摸摸</div>
+  <svg id="cat-run" viewBox="0 0 90 68" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <g id="cat-body">
-      <path class="tail" d="M20 50 C8 50 6 38 14 36 C18 35 19 40 16 41" fill="none" stroke="#1a1614" stroke-width="4" stroke-linecap="round"/>
-      <ellipse cx="34" cy="46" rx="16" ry="10" fill="#1a1614"/>
-      <circle cx="48" cy="36" r="10" fill="#1a1614"/>
-      <path d="M41 29 L45 21 L49 29 Z" fill="#1a1614"/>
-      <path d="M49 28 L54 21 L56 30 Z" fill="#1a1614"/>
-      <ellipse class="eye" cx="46" cy="36" rx="2.1" ry="2.6" fill="#ffd94a"/>
-      <ellipse class="eye" cx="53" cy="36" rx="2.1" ry="2.6" fill="#ffd94a"/>
-      <rect class="leg" x="26" y="52" width="4.5" height="9" rx="2.2" fill="#1a1614"/>
-      <rect class="leg b" x="40" y="52" width="4.5" height="9" rx="2.2" fill="#1a1614"/>
+      <!-- 尾巴（從屁股接出） -->
+      <path class="tail" d="M20 46 C12 48 7 42 9 36.5 C10.5 32 15.5 32.3 16 36"
+            fill="none" stroke="var(--cat-c,#1f1a18)" stroke-width="4.6" stroke-linecap="round"/>
+
+      <!-- 四隻腳：上端插進身體深處，腳掌與腿同一色，因此不會分離 -->
+      <g class="leg rb" style="transform-origin:31px 44px">
+        <rect x="27" y="34" width="7.6" height="15" rx="3.8" fill="var(--cat-rb,#1a1615)"/>
+        <ellipse cx="30.8" cy="50" rx="4.4" ry="2.8" fill="var(--cat-rb,#1a1615)"/>
+      </g>
+      <g class="leg rf" style="transform-origin:55px 44px">
+        <rect x="51.2" y="34" width="7.6" height="15" rx="3.8" fill="var(--cat-c,#1f1a18)"/>
+        <ellipse cx="55" cy="50" rx="4.4" ry="2.8" fill="var(--cat-c,#1f1a18)"/>
+      </g>
+      <g class="leg lb" style="transform-origin:34.5px 44px">
+        <rect x="30.8" y="34" width="7.2" height="14.4" rx="3.6" fill="var(--cat-lb,#241f1c)"/>
+        <ellipse cx="34.4" cy="49.2" rx="4.1" ry="2.6" fill="var(--cat-lb,#241f1c)"/>
+      </g>
+      <g class="leg lf" style="transform-origin:58.5px 44px">
+        <rect x="54.9" y="34" width="7.2" height="14.4" rx="3.6" fill="var(--cat-lf,#2d2724)"/>
+        <ellipse cx="58.5" cy="49.2" rx="4.1" ry="2.6" fill="var(--cat-lf,#2d2724)"/>
+      </g>
+
+      <!-- 身體（橢圓，略扁，蓋住腳的上段） -->
+      <ellipse cx="42" cy="37" rx="23" ry="12.4" fill="var(--cat-c,#1f1a18)"/>
+      <!-- 肚子亮一點的絨毛，柔邊 -->
+      <ellipse cx="50" cy="41" rx="13" ry="6.4" fill="#3a322e" opacity=".35"/>
+
+      <!-- 頭 -->
+      <circle cx="64" cy="25" r="13.4" fill="var(--cat-c,#1f1a18)"/>
+      <!-- 耳朵 -->
+      <path d="M54 16.6 L55.8 6.2 L63.2 14.4 Z" fill="var(--cat-c,#1f1a18)"/>
+      <path d="M64.4 14.4 L71.8 6.2 L73.6 16.6 Z" fill="var(--cat-c,#1f1a18)"/>
+      <path d="M56 14.6 L57.2 9.4 L60.4 13.8 Z" fill="#c98a9a" opacity=".55"/>
+      <path d="M67.2 13.8 L70.4 9.4 L71.6 14.6 Z" fill="#c98a9a" opacity=".55"/>
+
+      <!-- 眼睛 -->
+      <g class="eyes">
+        <ellipse class="eye" cx="60" cy="26" rx="2.9" ry="3.4" fill="#ffd94a"/>
+        <ellipse class="eye" cx="69" cy="26" rx="2.9" ry="3.4" fill="#ffd94a"/>
+        <circle cx="60.9" cy="24.8" r="1" fill="#fff"/>
+        <circle cx="69.9" cy="24.8" r="1" fill="#fff"/>
+      </g>
+
+      <!-- 鼻嘴 -->
+      <path d="M63.2 31 l1.8 .9 1.8 -.9" fill="none" stroke="#c98a9a" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M65 32 q-1.8 1.8 -3.7 1.2 M65 32 q1.8 1.8 3.7 1.2" fill="none" stroke="#75695f" stroke-width=".95" stroke-linecap="round" opacity=".8"/>
+
+      <!-- 鬍鬚 -->
+      <g stroke="#9a8e86" stroke-width=".85" stroke-linecap="round" opacity=".7">
+        <path d="M55.2 30.6 h-5.8"/><path d="M55.2 33 h-5.8"/>
+        <path d="M74.8 30.6 h5.8"/><path d="M74.8 33 h5.8"/>
+      </g>
     </g>
   </svg>
 </div>
