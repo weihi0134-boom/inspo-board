@@ -3,59 +3,86 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#e0f0f5" />
 <title>靈感收集箱</title>
 <style>
-  :root{ --bg:#e0f0f5; --card:#ffffff; --card2:#f4f9fb; --line:#cdd9df; --txt:#1a1614; --sub:#6f767c; --brand:#c18c4c; --brand2:#a9743a; --ink:#1a1614; --warn:#b5584f; --ok:#7d9a6d; }
+  :root{
+    --bg:#e0f0f5; --card:#ffffff; --card2:#f7fbfc; --line:#dbe6ea;
+    --txt:#1a1614; --sub:#7b848a;
+    --sand:#d5b185; --sand-d:#c19a6b; --sand-t:#f3e8da; --sand-ink:#3a2c1e;
+    --ok:#7d9a6d; --warn:#c05a4d;
+  }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;}
-  header{position:sticky;top:0;z-index:10;background:rgba(224,240,245,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
-  .wrap{max-width:860px;margin:0 auto;padding:0 16px;}
-  h1{font-size:20px;margin:14px 0 10px;display:flex;align-items:center;gap:8px}
-  .tabs{display:flex;gap:8px;padding-bottom:10px}
-  .tab{flex:1;text-align:center;padding:10px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-size:15px;cursor:pointer}
-  .tab.active{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
-  main{padding:16px 0 80px}
-  .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px}
-  .chip{white-space:nowrap;padding:8px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-size:14px;cursor:pointer}
-  .chip.active{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:16px}
-  .seg{display:flex;gap:6px;margin-bottom:10px}
-  .seg button{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--sub);font-size:14px;cursor:pointer}
-  .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
-  input,textarea,select{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:15px;font-family:inherit}
-  textarea{min-height:70px;resize:vertical}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  header{position:sticky;top:0;z-index:10;background:rgba(224,240,245,.93);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+  .wrap{max-width:900px;margin:0 auto;padding:0 16px;}
+  h1{font-size:19px;margin:14px 0 12px;display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.5px}
+  .tabs{display:flex;gap:8px;padding-bottom:12px}
+  .tab{flex:1;text-align:center;padding:11px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-size:15px;cursor:pointer;transition:.15s}
+  .tab.active{background:var(--sand);color:var(--sand-ink);border-color:var(--sand);font-weight:700}
+  main{padding:16px 0 90px}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;padding:9px 16px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-size:14px;cursor:pointer;transition:.15s}
+  .chip.active{background:var(--sand);color:var(--sand-ink);border-color:var(--sand);font-weight:700}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
+  .panel h4{margin:0 0 10px;font-size:13px;color:var(--sub);font-weight:600}
+  .seg{display:flex;gap:6px;margin-bottom:14px}
+  .seg button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--sub);font-size:14px;cursor:pointer;transition:.15s}
+  .seg button.on{background:var(--sand);color:var(--sand-ink);border-color:var(--sand);font-weight:700}
+  input,textarea,select{width:100%;padding:12px;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:15px;font-family:inherit;outline:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--sand);background:#fff}
+  textarea{min-height:76px;resize:vertical}
+  .field{margin-bottom:10px}
+  .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:600}
   .row{display:flex;gap:8px;margin-top:8px}
-  .btn{padding:11px 16px;border-radius:10px;border:none;background:var(--brand);color:#fff;font-size:15px;cursor:pointer;font-weight:700}
-  .btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);font-weight:400}
+  .btn{padding:12px 16px;border-radius:11px;border:none;background:var(--sand);color:var(--sand-ink);font-size:15px;cursor:pointer;font-weight:700;transition:.15s}
+  .btn:hover{background:var(--sand-d)}
+  .btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);font-weight:500}
+  .btn.ghost:hover{background:var(--sand-t)}
   .btn.rec{background:#c05a4d;color:#fff}
   .btn:disabled{opacity:.5}
   .muted{color:var(--sub);font-size:13px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
-  .card h3{margin:0 0 6px;font-size:15px}
-  .card a{color:var(--brand2);word-break:break-all}
-  .card audio{width:100%;margin-top:6px}
-  .card .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+  .card h3{margin:0 0 7px;font-size:15px;font-weight:700}
+  .card a{color:#9a6f3a;word-break:break-all}
+  .card audio{width:100%;margin-top:8px;height:38px}
+  .card .meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .thumbs img{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in}
   .del{background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer}
+  .del:hover{color:var(--warn)}
   .banner{display:flex;gap:10px;margin-bottom:14px}
-  .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
-  .stat b{display:block;font-size:24px;color:var(--brand)}
+  .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:center}
+  .stat b{display:block;font-size:24px;color:var(--sand-d);font-weight:800}
   .stat span{font-size:12px;color:var(--sub)}
   .cols{display:grid;grid-template-columns:1fr;gap:12px}
-  @media(min-width:720px){.cols{grid-template-columns:1fr 1fr 1fr}}
-  .col{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
-  .col h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:6px}
-  .dot{width:9px;height:9px;border-radius:50%}
-  .tcard{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
-  .tcard p{margin:0 0 6px;font-size:14px}
-  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:#efe3d3;color:var(--brand2);margin-top:4px}
-  .tag.due{color:var(--warn)}
-  .mv{display:flex;gap:6px;margin-top:6px}
-  .mv button{flex:1;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--sub);font-size:12px;cursor:pointer}
-  .empty{color:var(--sub);font-size:13px;text-align:center;padding:14px 0}
+  @media(min-width:740px){.cols{grid-template-columns:1fr 1fr 1fr}}
+  .col{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px}
+  .col h2{font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:6px;font-weight:700}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .tcard{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:8px}
+  .tcard p{margin:0 0 6px;font-size:14px;line-height:1.45}
+  .tag{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;background:var(--sand-t);color:#8a6134;margin:2px 4px 0 0}
+  .tag.due{background:#e9eef0;color:#5b6b73}
+  .mv{display:flex;gap:6px;margin-top:8px}
+  .mv button{flex:1;padding:7px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--sub);font-size:12px;cursor:pointer}
+  .mv button:hover{background:var(--sand-t);color:var(--sand-ink);border-color:var(--sand)}
+  .empty{color:var(--sub);font-size:13px;text-align:center;padding:18px 0}
   .hidden{display:none}
-  .exec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:14px}
-  .exec h2{font-size:14px;margin:0 0 8px;color:var(--brand2)}
-  .exec li{font-size:13px;margin:4px 0}
+  .exec{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+  .exec h2{font-size:14px;margin:0 0 8px;color:#8a6134;font-weight:700}
+  .exec li{font-size:13px;margin:5px 0}
+  .sub{font-size:13px;color:var(--sub);margin:0 0 12px;line-height:1.6}
+  .calbox{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:16px}
+  .calbox iframe{width:100%;height:560px;border:0;border-radius:12px;background:#f7fbfc}
+  .calbtns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .calbtns button{flex:1;min-width:120px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:13px;cursor:pointer}
+  .calbtns button:hover{background:var(--sand-t);border-color:var(--sand)}
+  .calbtns button.on{background:var(--sand);color:var(--sand-ink);border-color:var(--sand);font-weight:700}
+  .lightbox{position:fixed;inset:0;background:rgba(26,22,20,.82);display:flex;align-items:center;justify-content:center;z-index:99;padding:16px}
+  .lightbox img{max-width:100%;max-height:90vh;border-radius:12px}
+  .hint{background:var(--sand-t);border-radius:12px;padding:12px 14px;font-size:13px;color:#7a5832;line-height:1.7;margin-bottom:14px}
 </style>
 </head>
 <body>
@@ -65,12 +92,14 @@
     <div class="tabs">
       <div class="tab active" data-view="ideas" onclick="switchView('ideas')">💡 靈感</div>
       <div class="tab" data-view="board" onclick="switchView('board')">✅ 待辦事項看板</div>
+      <div class="tab" data-view="calendar" onclick="switchView('calendar')">📅 行事曆</div>
     </div>
   </div>
 </header>
 <main class="wrap">
   <section id="view-ideas"></section>
   <section id="view-board" class="hidden"></section>
+  <section id="view-calendar" class="hidden"></section>
 </main>
 <script src="/app.js"></script>
 </body>
