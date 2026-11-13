@@ -60,7 +60,7 @@ function addForm() {
   const psrc = recBlob ? URL.createObjectURL(recBlob) : (recFile ? URL.createObjectURL(recFile) : '');
   const preview = psrc ? `<audio controls src="${psrc}"></audio>` : '<div class="muted">按「開始錄音」直接錄，或選一個已經錄好的檔案上傳。</div>';
   const audioField = `<div class="field"><label>錄音 / 語音</label>
-      <div class="row"><button class="btn rec" id="rec-btn" onclick="toggleRec()" style="flex:1">${recorder && recorder.state === 'recording' ? '■ 停止錄音' : '● 開始錄音'}</button></div>
+      <div class="row"><button class="btn ghost rec" id="rec-btn" onclick="toggleRec()" style="flex:1">${recorder && recorder.state === 'recording' ? '■ 停止錄音' : '● 開始錄音'}</button></div>
       <div class="row"><label class="btn ghost" style="flex:1;text-align:center;cursor:pointer;margin:0">📁 上傳錄音檔<input type="file" accept="audio/*" style="display:none" onchange="pickFile(this)" /></label></div>
       <div style="margin-top:10px">${preview}</div></div>`;
 
@@ -71,7 +71,7 @@ function addForm() {
     <label class="btn ghost" style="display:block;text-align:center;cursor:pointer;margin:0">📷 上傳截圖<input type="file" accept="image/*" multiple style="display:none" onchange="pickImages(this)" /></label>
     ${thumbs ? `<div class="thumbs">${thumbs}</div><div class="muted" style="margin-top:6px">點圖片可移除</div>` : ''}</div>`;
 
-  return titleField + linkField + textField + audioField + noteField + imgField +
+  return titleField + linkField + textField + noteField + audioField + imgField +
     `<div class="row"><button class="btn" onclick="addItem()" style="flex:1">➕ 加到「${state.folder}」</button></div>`;
 }
 
@@ -132,7 +132,8 @@ async function toggleRec() {
     };
     recorder.start();
     btn.textContent = '■ 停止錄音';
-    btn.style.background = '#7fa3b2';
+    btn.style.background = '#ecd9bf';
+    btn.style.color = '#4a3a28';
   } catch (e) {
     alert('無法使用麥克風，請允許麥克風權限：' + e.message);
   }
