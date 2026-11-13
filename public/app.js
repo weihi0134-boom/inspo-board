@@ -1,7 +1,7 @@
 const FOLDERS = ['影片靈感', '文案點子', '語音備忘', '想拍的影片', '新歌靈感'];
 const STATUS = { todo: '待辦事項', doing: '正在處理', done: '已完成' };
 const DOT = { todo: '#d5b185', doing: '#7fa3b2', done: '#7d9a6d' };
-let state = { items: [], tasks: [], settings: { calendarSrc: '' }, folder: FOLDERS[0], addType: 'link', calMode: 'week', calOffset: 0 };
+let state = { items: [], tasks: [], settings: { calendarSrc: '' }, folder: FOLDERS[0], addType: 'link', calMode: 'week', calOffset: 0, calSrcKind: 'main', calEvents: [], calErr: '', holidaySrc: 'https://calendar.google.com/calendar/ical/zh-tw.taiwan%23holiday%40group.v.calendar.google.com/public/basic.ics' };
 let recorder = null, recChunks = [], recBlob = null, recFile = null;
 let imgFiles = [];
 let draft = { title: '', link: '', content: '', note: '' };
@@ -362,7 +362,11 @@ function renderCalendar() {
   const myTasks = `<div class="exec"><h2>今天的待辦</h2><ul style="margin:0;padding-left:16px">${todayList}</ul></div>
     <div class="exec"><h2>接下來要做的事</h2><ul style="margin:0;padding-left:16px;list-style:none">${upList}</ul></div>`;
 
-  el.innerHTML = setup + openBtn + calModeBtns + `<div id="cal-native"></div>` + myTasks;
+  const srcSw = src ? `<div class="calnav">
+      <button class="${state.calSrcKind === 'main' ? 'on' : ''}" onclick="setCalSrc('main')">我的行事曆</button>
+      <button class="${state.calSrcKind === 'holiday' ? 'on' : ''}" onclick="setCalSrc('holiday')">台灣假日 🇹🇼</button>
+    </div>` : '';
+  el.innerHTML = setup + openBtn + srcSw + calModeBtns + `<div id="cal-native"></div>` + myTasks;
   if (src) drawCalendar();
 }
 
@@ -382,26 +386,48 @@ function calRange() {
   return [a, b];
 }
 
+function activeCalSrc() {
+  return state.calSrcKind === 'holiday' ? state.holidaySrc : calSrc();
+}
+
 async function drawCalendar() {
   const box = document.getElementById('cal-native');
   if (!box) return;
-  if (!/^https?:/i.test(calSrc())) {
+  const url = activeCalSrc();
+  if (!/^https?:/i.test(url)) {
     box.innerHTML = `<div class="calbox"><div class="sub">網址格式不對，請貼上以 https:// 開頭的行事曆網址。</div></div>`;
     return;
   }
-  box.innerHTML = `<div class="calbox"><div class="muted">正在讀取你的行事曆…</div></div>`;
+  box.innerHTML = `<div class="calbox"><div class="muted">正在讀取行事曆…</div></div>`;
   try {
-    const r = await fetch('/api/ics?src=' + encodeURIComponent(calSrc()));
+    const r = await fetch('/api/ics?src=' + encodeURIComponent(url) + '&t=' + Date.now());
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || '讀取失敗');
-    const events = j.events || [];
-    box.innerHTML = calBoard(events);
+    state.calEvents = j.events || [];
+    if (j.raw) state.calDebug = j.raw;
+    state.calErr = '';
+    state.calName = j.name || '';
+    box.innerHTML = `<div class="muted" style="margin:0 2px 8px">${state.calName ? '已連上「' + esc(state.calName) + '」，' : ''}讀到 ${state.calEvents.length} 筆行程${state.calSrcKind === 'holiday' ? '（台灣假日）' : ''}</div>` + calBoard(state.calEvents);
   } catch (e) {
-    box.innerHTML = `<div class="calbox"><div class="sub">讀不到你的行事曆（${esc(e.message)}）。<br>
-      常見原因：行事曆權限不是「公開」，或貼到的不是 <b>basic.ics</b> 那條網址。<br>
-      按下面的按鈕可以直接打開 Google 行事曆看行程。</div>
-      ${calSrc() ? `<a class="btn" href="${esc(calSrc())}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">🔗 打開行事曆</a>` : ''}</div>`;
+    state.calEvents = []; state.calErr = e.message;
+    box.innerHTML = `<div class="calbox"><div class="sub">讀不到這本行事曆（診斷：${esc(e.message)}）。</div></div>`;
   }
+}
+
+function showDay(k) {
+  const evs = (state.calEvents || []).filter((e) => {
+    const st = (e.start || '').slice(0, 10);
+    if (!st) return false;
+    if (e.allDay) return st <= k && (e.end || st).slice(0, 10) >= k;
+    return st === k;
+  });
+  const d = document.createElement('div');
+  d.className = 'lightbox';
+  d.onclick = () => d.remove();
+  d.innerHTML = `<div class="daybox"><h4>${esc(k)} 的行程（${evs.length}）</h4>
+    ${evs.map((e) => `<div class="calrow"><span>${esc(e.time || '整天')}</span>${esc(e.title)}</div>`).join('') || '<div class="muted">這天沒有行程</div>'}
+    <button class="btn teal" style="margin-top:12px;width:100%" onclick="this.closest('.lightbox').remove()">關閉</button></div>`;
+  document.body.appendChild(d);
 }
 
 function calBoard(events) {
@@ -427,6 +453,7 @@ function calBoard(events) {
   const cells = days.map((d) => {
     const k = dayKey(d);
     const evs = events.filter((e) => {
+      if (state.hideNoTitle && !String(e.title || '').trim()) return false;
       const st = (e.start || '').slice(0, 10);
       if (!st) return false;
       if (e.allDay) return st <= k && (e.end || st).slice(0, 10) >= k;
@@ -435,15 +462,16 @@ function calBoard(events) {
     const dim = state.calMode === 'month' && d.getMonth() !== a.getMonth();
     const isT = k === todayK;
     return `<div class="calcell ${dim ? 'dim' : ''} ${isT ? 'today' : ''}">
-      <div class="caldate">${d.getDate()}</div>
-      ${evs.slice(0, 3).map((e) => `<div class="calev" title="${esc(e.title)}">${e.time && e.time !== '整天' ? esc(e.time) + ' ' : ''}${esc(e.title)}</div>`).join('')}
-      ${evs.length > 3 ? `<div class="calmore">+${evs.length - 3}</div>` : ''}
+      <div class="caldate">${d.getDate()}${d.getDate() === 1 || (days.indexOf(d) === 0) ? ' <span class="calmon">' + (d.getMonth() + 1) + '月</span>' : ''}</div>
+      ${evs.slice(0, 4).map((e) => `<div class="calev" title="${esc(e.title)}">${e.time && e.time !== '整天' ? esc(e.time) + ' ' : ''}${esc(e.title)}</div>`).join('')}
+      ${evs.length > 4 ? `<div class="calmore" onclick="showDay('${k}')">還有 ${evs.length - 4} 筆…</div>` : ''}
     </div>`;
   }).join('');
   return `<div class="calbox"><div class="sub">${a.getFullYear()} 年 ${a.getMonth() + 1} 月 ${a.getDate()} 日 起</div>
     <div class="calgrid">${head}${cells}</div></div>`;
 }
 
+function setCalSrc(k) { state.calSrcKind = k; renderCalendar(); }
 function setCalMode(m) { state.calMode = m; state.calOffset = 0; renderCalendar(); }
 function calShift(n) { state.calOffset += n; renderCalendar(); }
 async function saveCal() {
