@@ -1,10 +1,14 @@
 const FOLDERS = ['影片靈感', '文案點子', '語音備忘', '想拍的影片', '新歌靈感'];
 const STATUS = { todo: '待辦事項', doing: '正在處理', done: '已完成' };
 const DOT = { todo: '#d5b185', doing: '#7fa3b2', done: '#7d9a6d' };
-let state = { items: [], tasks: [], settings: { calendarSrc: '' }, folder: FOLDERS[0], addType: 'link', calMode: 'week', calOffset: 0, calSrcKind: 'main', calEvents: [], calErr: '', holidaySrc: 'https://calendar.google.com/calendar/ical/zh-tw.taiwan%23holiday%40group.v.calendar.google.com/public/basic.ics' };
+let state = { items: [], tasks: [], settings: { calendarSrc: '' }, folder: FOLDERS[0], addType: 'link', calMode: 'month', calOffset: 0, calSrcKind: 'main', calEvents: [], calErr: '', holidaySrc: 'https://calendar.google.com/calendar/ical/zh-tw.taiwan%23holiday%40group.v.calendar.google.com/public/basic.ics' };
 let recorder = null, recChunks = [], recBlob = null, recFile = null;
 let imgFiles = [];
 let draft = { title: '', link: '', content: '', note: '' };
+let openMonths = {};   // 全部行程清單：哪幾個月是展開的
+let ideasOpen = true;  // 全部靈感是否展開
+let catOn = true, catTimer = null;
+function toggleIdeas() { ideasOpen = !ideasOpen; renderIdeas(); }
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -24,6 +28,7 @@ async function loadAll() {
   renderIdeas();
   renderBoard();
   renderCalendar();
+  startCat();
 }
 
 function switchView(v) {
@@ -47,8 +52,11 @@ function renderIdeas() {
   el.innerHTML = `
     <div class="chips">${chips}</div>
     <div class="panel"><h4>新增靈感 · 會存到「${state.folder}」</h4>${addForm()}</div>
-    <div class="listhead">全部靈感 <span class="muted">(${count})</span></div>
-    ${list}`;
+    <button class="foldhead static" style="margin-top:18px" onclick="toggleIdeas()">
+      <span>💡 全部靈感 <span class="muted">(${count})</span></span>
+      <span class="chev">${ideasOpen ? '▴' : '▾'}</span>
+    </button>
+    ${ideasOpen ? list : ''}`;
 }
 
 function addForm() {
@@ -380,7 +388,7 @@ function calRange() {
     return [a, b];
   }
   const a = new Date(now);
-  a.setDate(now.getDate() - now.getDay() + off * 7);
+  a.setDate(now.getDate() - ((now.getDay() + 6) % 7) + off * 7);
   const b = new Date(a);
   b.setDate(a.getDate() + 6);
   return [a, b];
@@ -435,12 +443,13 @@ function calBoard(events) {
   const days = [];
   if (state.calMode === 'month') {
     const first = new Date(a);
-    const startPad = new Date(first); startPad.setDate(1 - first.getDay());
+    const startPad = new Date(first);
+    startPad.setDate(1 - ((first.getDay() + 6) % 7)); // 從星期一開始
     for (let i = 0; i < 42; i++) { const d = new Date(startPad); d.setDate(startPad.getDate() + i); days.push(d); }
   } else {
     for (let i = 0; i < 7; i++) { const d = new Date(a); d.setDate(a.getDate() + i); days.push(d); }
   }
-  const wk = ['日', '一', '二', '三', '四', '五', '六'];
+  const wk = ['一', '二', '三', '四', '五', '六', '日'];
   const todayK = dayKey(new Date());
 
   // 先把行程按日期分好（一次算完，避免每格重複比對出錯）
@@ -461,7 +470,7 @@ function calBoard(events) {
   });
   Object.keys(byDay).forEach((k) => byDay[k].sort((x, y) => String(x.time).localeCompare(String(y.time))));
 
-  const head = days.slice(0, 7).map((d) => `<div class="calhead">${wk[d.getDay()]}</div>`).join('');
+  const head = ['一', '二', '三', '四', '五', '六', '日'].map((w) => `<div class="calhead">${w}</div>`).join('');
   const cells = days.map((d) => {
     const k = dayKey(d);
     const evs = byDay[k] || [];
@@ -478,9 +487,8 @@ function calBoard(events) {
   const label = state.calMode === 'month'
     ? `${a.getFullYear()} 年 ${a.getMonth() + 1} 月`
     : `${a.getMonth() + 1}/${a.getDate()} ～ ${b.getMonth() + 1}/${b.getDate()}`;
-  const listBtn = `<div class="calnav" style="margin:0 0 10px"><button onclick="setCalMode('agenda')">📋 全部行程清單</button></div>`;
   return `<div class="calbox"><div class="sub">${label}${state.calOffset ? '' : '（本月）'}</div>
-    <div class="calgrid">${head}${cells}</div></div>` + listBtn + calAgendaList(events);
+    <div class="calgrid">${head}${cells}</div></div>` + calAgendaList(events);
 }
 
 function addDaysJs(iso, n) {
@@ -500,17 +508,36 @@ function calAgendaList(events) {
       (months[k] = months[k] || []).push(e);
     });
   const keys = Object.keys(months).sort();
+  const total = keys.reduce((n, k) => n + months[k].length, 0);
   if (!keys.length) return '<div class="calbox"><div class="muted">目前沒有行程。</div></div>';
-  const rows = keys.map((k) => {
+  const body = keys.map((k) => {
     const [y, m] = k.split('-');
+    const open = !!openMonths[k];
     const items = months[k].map((e) => {
       const d = String(e.start).slice(8, 10);
       const span = e.end && e.end !== e.start ? ` ～ ${String(e.end).slice(5, 10).replace('-', '/')}` : '';
       return `<div class="calrow"><b>${d}</b><span>${esc(e.time || '整天')}${esc(span)}</span>${esc(e.title)}</div>`;
     }).join('');
-    return `<div class="calmonth"><h4>${y} 年 ${Number(m)} 月 <span class="muted">(${months[k].length})</span></h4>${items}</div>`;
+    return `<div class="fold ${open ? 'open' : ''}">
+      <button class="foldhead" onclick="toggleMonth('${k}')">
+        <span>${y} 年 ${Number(m)} 月 <span class="muted">(${months[k].length})</span></span>
+        <span class="chev">▾</span>
+      </button>
+      <div class="foldbody">${items}</div></div>`;
   }).join('');
-  return `<div class="calbox"><div class="sub">全部行程（依月份）</div>${rows}</div>`;
+  return `<div class="calbox">
+    <div class="foldhead static" onclick="toggleAllMonths(${keys.length})">
+      <span>📋 全部行程清單 <span class="muted">(${total} 筆 / ${keys.length} 個月)</span></span>
+      <span class="chev">${keys.every((k) => openMonths[k]) ? '▴' : '▾'}</span>
+    </div>${body}</div>`;
+}
+
+function toggleMonth(k) { openMonths[k] = !openMonths[k]; renderCalendar(); }
+function toggleAllMonths(n) {
+  const anyOpen = Object.values(openMonths).some(Boolean);
+  openMonths = {};
+  if (!anyOpen) (state.calEvents || []).forEach((e) => { if (e.start) openMonths[String(e.start).slice(0, 7)] = true; });
+  renderCalendar();
 }
 
 function setCalSrc(k) { state.calSrcKind = k; renderCalendar(); }
@@ -538,3 +565,79 @@ async function clearCal() {
 }
 
 loadAll();
+
+/* ===== 小黑貓 ===== */
+const CAT_W = 64;
+function catMoveTo(x) {
+  const svg = document.getElementById('cat-run');
+  if (!svg) return;
+  svg.style.transform = `translateX(${x}px)`;
+}
+function catState(st) {
+  const svg = document.getElementById('cat-run');
+  const zzz = document.getElementById('cat-zzz');
+  if (!svg) return;
+  const facingLeft = svg.dataset.left === '1';
+  const scale = facingLeft ? -1 : 1;
+  svg.style.setProperty('--flip', scale);
+  svg.classList.remove('walk', 'sleep');
+  zzz.classList.remove('on');
+  const body = svg.querySelector('#cat-body');
+  body.setAttribute('transform', scale < 0 ? 'translate(64,0) scale(-1,1)' : '');
+  if (st === 'walk') svg.classList.add('walk');
+  if (st === 'sleep') { svg.classList.add('sleep'); zzz.classList.add('on'); }
+  if (st === 'stretch') {
+    body.style.transformOrigin = '50% 100%';
+    body.style.animation = 'stretch 1.8s ease-in-out';
+    setTimeout(() => { body.style.animation = ''; }, 1900);
+  }
+  if (st === 'groom') {
+    body.style.animation = 'groomNod .5s ease-in-out 4';
+    setTimeout(() => { body.style.animation = ''; }, 2100);
+  }
+  if (st === 'yawn') {
+    svg.querySelectorAll('.eye').forEach((e) => { e.setAttribute('ry', '0.8'); });
+    setTimeout(() => svg.querySelectorAll('.eye').forEach((e) => e.setAttribute('ry', '2.6')), 1400);
+  }
+}
+function catWalk() {
+  if (!catOn) return;
+  const svg = document.getElementById('cat-run');
+  if (!svg) return;
+  const maxX = Math.max(20, window.innerWidth - CAT_W - 8);
+  const target = Math.random() * maxX;
+  const cur = parseFloat((svg.style.transform.match(/translateX\(([-\d.]+)px\)/) || [0, 0])[1]) || 0;
+  svg.dataset.left = target < cur ? '1' : '0';
+  const dur = Math.min(14, Math.max(4, Math.abs(target - cur) / 90));
+  svg.style.transitionDuration = dur + 's';
+  svg.style.transitionTimingFunction = 'linear';
+  catState('walk');
+  catMoveTo(target);
+  const zzz = document.getElementById('cat-zzz');
+  zzz.style.left = target + 30 + 'px';
+  catTimer = setTimeout(catIdle, dur * 1000 + 300);
+}
+function catIdle() {
+  if (!catOn) return;
+  const actions = ['stretch', 'groom', 'yawn', 'sit', 'sleep', 'sit', 'walk'];
+  const st = actions[Math.floor(Math.random() * actions.length)];
+  if (st === 'walk') { catWalk(); return; }
+  catState(st);
+  const wait = st === 'sleep' ? 9000 : 2600 + Math.random() * 1800;
+  catTimer = setTimeout(catWalk, wait);
+}
+function toggleCat() {
+  catOn = !catOn;
+  const stage = document.getElementById('cat-stage');
+  const badge = document.querySelector('.cat-badge');
+  if (stage) stage.style.display = catOn ? '' : 'none';
+  if (badge) badge.textContent = catOn ? '🐈 小貓' : '🐈 叫小貓出來';
+  clearTimeout(catTimer);
+  if (catOn) { catState('sit'); catTimer = setTimeout(catWalk, 1500); }
+}
+function startCat() {
+  if (!document.getElementById('cat-run')) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  catMoveTo(Math.min(60, window.innerWidth - CAT_W - 10));
+  catTimer = setTimeout(catWalk, 2000);
+}

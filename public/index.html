@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#e0f0f5" />
-<title>靈感收集箱</title>
+<title>小薇正在輸入中...</title>
 <style>
   :root{
     --bg:#e0f0f5; --card:#ffffff; --card2:#f7fbfc; --line:#dbe6ea;
@@ -107,16 +107,55 @@
   .calcell{cursor:pointer}
   .calmonth{margin-bottom:14px}
   .calmonth h4{margin:0 0 6px;font-size:13px;color:#8a6134}
+  /* 收納式標題 */
+  .fold{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden;background:var(--card2)}
+  .foldhead{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 14px;background:#fff;border:none;border-bottom:1px solid transparent;font-size:13.5px;font-weight:700;color:var(--txt);cursor:pointer;font-family:inherit;text-align:left}
+  .foldhead.static{border:1px solid var(--line);border-radius:12px;margin-bottom:10px}
+  .fold.open .foldhead{border-bottom-color:var(--line)}
+  .foldbody{display:none;padding:4px 14px 10px}
+  .fold.open .foldbody{display:block}
+  .foldhead .chev{color:var(--sub);font-size:12px;transition:transform .2s}
+  @keyframes groomNod{0%,100%{transform:rotate(0)}50%{transform:rotate(-12deg) translateY(2px)}}
   .calrow{font-size:13px;padding:7px 2px;border-bottom:1px solid var(--line)}
   .calrow b{color:#8a6134;margin-right:6px}
   .calrow span{color:var(--sub);margin-right:6px;font-size:12px}
+
+  /* ===== 品牌標題（IG 輸入中動畫） ===== */
+  .brand{font-size:19px;letter-spacing:.6px}
+  .typing{display:inline-flex;align-items:center;gap:4px;margin-left:2px;padding:6px 10px;background:#fff;border:1px solid var(--line);border-radius:999px}
+  .typing i{width:6px;height:6px;border-radius:50%;background:#9aa7ad;display:block;animation:typing 1.35s infinite ease-in-out}
+  .typing i:nth-child(2){animation-delay:.18s}
+  .typing i:nth-child(3){animation-delay:.36s}
+  @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-4px);opacity:1}}
+  @media(prefers-reduced-motion:reduce){.typing i{animation:none;opacity:.7}.cat-stage,#cat-run{display:none!important}}
+
+  /* ===== 小黑貓 ===== */
+  .cat-stage{position:fixed;left:0;right:0;bottom:0;height:0;pointer-events:none;z-index:8}
+  .cat-stage svg{position:absolute;bottom:0;width:64px;height:64px;transform:translateX(0);transition:transform .9s cubic-bezier(.45,.05,.55,.95);overflow:visible}
+  .cat-stage svg.walk .leg{animation:legA .42s infinite alternate ease-in-out}
+  .cat-stage svg.walk .leg.b{animation-name:legB}
+  @keyframes legA{from{transform:rotate(0)}to{transform:rotate(16deg)}}
+  @keyframes legB{from{transform:rotate(0)}to{transform:rotate(-16deg)}}
+  .cat-stage svg .tail{transform-origin:0 0;animation:tailWag 1.6s infinite ease-in-out}
+  @keyframes tailWag{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(12deg)}}
+  .cat-stage svg .eye{transition:transform .1s}
+  .cat-stage svg.sleep .eye{transform:scaleY(.12)}
+  .cat-stage svg .blink{animation:blink 5s infinite}
+  @keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+  .cat-stage svg .stretch{transform-origin:50% 100%;animation:stretch 1.8s ease-in-out}
+  @keyframes stretch{0%,100%{transform:scaleX(1) scaleY(1)}45%{transform:scaleX(1.16) scaleY(.88)}}
+  .cat-zzz{position:absolute;bottom:56px;font-size:13px;color:#7b848a;opacity:0;transition:opacity .4s;pointer-events:none}
+  .cat-zzz.on{opacity:1;animation:zzz 2.4s infinite ease-in-out}
+  @keyframes zzz{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-9px);opacity:1}}
+  .cat-badge{position:fixed;right:12px;bottom:10px;z-index:9;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--sub);cursor:pointer;backdrop-filter:blur(6px)}
   .hint{background:var(--sand-t);border-radius:12px;padding:12px 14px;font-size:13px;color:#7a5832;line-height:1.7;margin-bottom:14px}
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <h1>💡 靈感收集箱</h1>
+    <h1 class="brand">小薇正在輸入中<span class="typing"><i></i><i></i><i></i></span></h1>
+    <div class="cat-badge" onclick="toggleCat()">🐈 小貓</div>
     <div class="tabs">
       <div class="tab active" data-view="ideas" onclick="switchView('ideas')">💡 靈感</div>
       <div class="tab" data-view="board" onclick="switchView('board')">✅ 待辦事項看板</div>
@@ -129,6 +168,23 @@
   <section id="view-board" class="hidden"></section>
   <section id="view-calendar" class="hidden"></section>
 </main>
+
+<div class="cat-stage" id="cat-stage">
+  <div class="cat-zzz" id="cat-zzz">z z Z</div>
+  <svg id="cat-run" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <g id="cat-body">
+      <path class="tail" d="M20 50 C8 50 6 38 14 36 C18 35 19 40 16 41" fill="none" stroke="#1a1614" stroke-width="4" stroke-linecap="round"/>
+      <ellipse cx="34" cy="46" rx="16" ry="10" fill="#1a1614"/>
+      <circle cx="48" cy="36" r="10" fill="#1a1614"/>
+      <path d="M41 29 L45 21 L49 29 Z" fill="#1a1614"/>
+      <path d="M49 28 L54 21 L56 30 Z" fill="#1a1614"/>
+      <ellipse class="eye" cx="46" cy="36" rx="2.1" ry="2.6" fill="#ffd94a"/>
+      <ellipse class="eye" cx="53" cy="36" rx="2.1" ry="2.6" fill="#ffd94a"/>
+      <rect class="leg" x="26" y="52" width="4.5" height="9" rx="2.2" fill="#1a1614"/>
+      <rect class="leg b" x="40" y="52" width="4.5" height="9" rx="2.2" fill="#1a1614"/>
+    </g>
+  </svg>
+</div>
 <script src="/app.js"></script>
 </body>
 </html>
