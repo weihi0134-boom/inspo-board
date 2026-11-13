@@ -339,6 +339,13 @@ function renderCalendar() {
       <a class="btn" href="${esc(src)}" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none">🔗 打開我的 Google 行事曆</a>
       <button class="btn ghost" onclick="clearCal()">重新設定</button></div>` : '';
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const today = state.tasks.filter((t) => t.due === todayStr);
+  const todayIds = new Set(today.map((t) => t.id));
+  const upcoming = state.tasks
+    .filter((t) => t.status !== 'done' && t.due && t.due > todayStr && !todayIds.has(t.id))
+    .sort((a, b) => a.due.localeCompare(b.due))
+    .slice(0, 6);
   const setup = !src ? `<div class="calbox">
       <div class="sub">貼上你的 Google 行事曆網址，這裡就會列出你的行程。</div>
       <div class="field"><label>行事曆網址</label><input id="cal-input" placeholder="貼上行事曆網址（或整段嵌入程式碼）" value="" /></div>
@@ -362,11 +369,6 @@ function renderCalendar() {
         <button onclick="calShift(1)">下一${state.calMode === 'month' ? '個月' : '週'} ›</button>
       </div>`}` : '';
 
-  const today = state.tasks.filter((t) => t.due === new Date().toISOString().slice(0, 10));
-  const todayStr = new Date().toISOString().slice(0, 10);
-  today.forEach((t) => seen.add(t.id));
-  const upcoming = state.tasks.filter((t) => t.status !== 'done' && t.due && t.due > todayStr && !seen.has(t.id)).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
-  const seen = new Set();
   const todayList = today.length ? today.map((t) => `<li>• ${esc(t.title)}</li>`).join('') : '<div class="muted">今天沒有標日期的待辦事項。</div>';
   const upList = upcoming.length ? upcoming.map((t) => `<li>${esc(t.due.slice(5))} ・ ${esc(t.title)} <span style="color:#8a6134;cursor:pointer" onclick="addToCal('${t.id}')">📅</span></li>`).join('') : '<div class="muted">還沒有排日期的待辦事項。</div>';
 
@@ -377,8 +379,9 @@ function renderCalendar() {
       <button class="${state.calSrcKind === 'main' ? 'on' : ''}" onclick="setCalSrc('main')">我的行事曆</button>
       <button class="${state.calSrcKind === 'holiday' ? 'on' : ''}" onclick="setCalSrc('holiday')">台灣假日 🇹🇼</button>
     </div>` : '';
-  // 順序：今天的待辦 → 接下來要做的事 → 📋 全部行程清單（日曆在最下方）
-  el.innerHTML = setup + openBtn + srcSw + myTasks + calModeBtns + `<div id="cal-native"></div>`;
+  // 順序（照使用者指定）：行事曆 → 今天的待辦 → 接下來要做的事 → 📋 全部行程清單
+  const calListBox = src ? `<div id="cal-list-box"></div>` : '';
+  el.innerHTML = setup + openBtn + srcSw + calModeBtns + `<div id="cal-native"></div>` + myTasks + calListBox;
   if (src) drawCalendar();
 }
 
@@ -420,6 +423,8 @@ async function drawCalendar() {
     state.calErr = '';
     state.calName = j.name || '';
     box.innerHTML = `<div class="muted" style="margin:0 2px 8px">${state.calName ? '已連上「' + esc(state.calName) + '」，' : ''}讀到 ${state.calEvents.length} 筆行程${state.calSrcKind === 'holiday' ? '（台灣假日）' : ''}</div>` + calBoard(state.calEvents);
+    const listBox = document.getElementById('cal-list-box');
+    if (listBox) listBox.innerHTML = calAgendaList(state.calEvents);
   } catch (e) {
     state.calEvents = []; state.calErr = e.message;
     box.innerHTML = `<div class="calbox"><div class="sub">讀不到這本行事曆（診斷：${esc(e.message)}）。</div></div>`;
@@ -492,7 +497,7 @@ function calBoard(events) {
     ? `${a.getFullYear()} 年 ${a.getMonth() + 1} 月`
     : `${a.getMonth() + 1}/${a.getDate()} ～ ${b.getMonth() + 1}/${b.getDate()}`;
   return `<div class="calbox"><div class="sub">${label}${state.calOffset ? '' : '（本月）'}</div>
-    <div class="calgrid">${head}${cells}</div></div>` + calAgendaList(events);
+    <div class="calgrid">${head}${cells}</div></div>`;
 }
 
 function addDaysJs(iso, n) {
@@ -571,7 +576,7 @@ async function clearCal() {
 loadAll();
 
 /* ===== 小黑貓 ===== */
-const CAT_W = 80;
+const CAT_W = 84;
 const CAT_ACTIONS = ['stretch', 'groom', 'yawn', 'look', 'tailchase', 'sit', 'sleep', 'walk', 'walk'];
 
 function catEl() { return document.getElementById('cat-run'); }
@@ -585,12 +590,14 @@ function catFace(dirLeft) {
   const svg = catEl();
   if (!svg) return;
   const body = svg.querySelector('#cat-body');
-  body.setAttribute('transform', dirLeft ? 'translate(80,0) scale(-1,1)' : '');
+  faceLeft = !!dirLeft;
+  body.setAttribute('transform', dirLeft ? 'translate(92,0) scale(-1,1)' : '');
 }
+let faceLeft = false;
 function catSetState(st) {
   const svg = catEl();
   if (!svg) return;
-  svg.classList.remove('walk', 'sleep', 'stretch', 'groom', 'yawn', 'pet', 'sit');
+  svg.classList.remove('walk', 'sleep', 'stretch', 'groom', 'yawn', 'pet', 'sit', 'appear');
   document.getElementById('cat-zzz').classList.remove('on');
   if (st) svg.classList.add(st);
   if (st === 'sleep') document.getElementById('cat-zzz').classList.add('on');
@@ -599,23 +606,119 @@ function catWalk() {
   if (!catOn) return;
   const svg = catEl();
   if (!svg) return;
-  if (Math.random() < 0.25) catFace(true); // 偶爾先轉身
   const maxX = Math.max(20, window.innerWidth - CAT_W - 6);
   const target = Math.max(4, Math.random() * maxX);
   const cur = catX();
   const dirLeft = target < cur;
-  catFace(dirLeft);
   const dist = Math.abs(target - cur);
-  const dur = Math.min(13, Math.max(3.5, dist / 85));
-  svg.style.transitionDuration = dur + 's';
+
+  if (dirLeft !== faceLeft && dist > 120) {
+    /* 不倒退：先「咻 —」跳到另一邊，落地再繼續走 */
+    clearTimeout(catTimer);
+    catSetState('');
+    svg.style.transition = 'opacity .28s';
+    svg.style.opacity = '0';
+    catTimer = setTimeout(() => {
+      svg.style.transition = 'none';
+      svg.style.transform = `translateX(${target}px)`;
+      catFace(dirLeft);
+      catMoveFx(target);
+      svg.style.transition = 'opacity .3s';
+      svg.style.opacity = '';
+      catSetState('appear');
+      catTimer = setTimeout(() => { catSetState(''); catIdle(); }, 700);
+    }, 300);
+    return;
+  }
+
+  catFace(dirLeft);
+  const dur = Math.min(12, Math.max(3.2, dist / 88));
+  svg.style.transition = `transform ${dur}s linear`;
   catSetState('walk');
   svg.style.transform = `translateX(${target}px)`;
-  const zzz = document.getElementById('cat-zzz');
-  const hint = document.getElementById('cat-hint');
-  zzz.style.left = (target + 26) + 'px';
-  hint.style.left = (target + 8) + 'px';
+  catPawTrack(cur, target, dur);
+  catMoveFx(target);
   clearTimeout(catTimer);
   catTimer = setTimeout(catIdle, dur * 1000 + 250);
+}
+
+/* 腳印：沿著路線印下小肉球，踩過約 2.6 秒後慢慢淡掉 */
+let pawTimer = null;
+function pawCanvas() { return document.getElementById('cat-paws'); }
+function sizePawCanvas() {
+  const c = pawCanvas();
+  if (!c) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = window.innerWidth * dpr;
+  c.height = 74 * dpr;
+  const g = c.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+const pawPrints = [];
+function drawPaw(g, x, y, ang, alpha) {
+  g.save();
+  g.translate(x, y);
+  g.rotate(ang);
+  g.globalAlpha = alpha;
+  g.fillStyle = '#6f7b81';
+  g.beginPath();
+  g.ellipse(0, 2.4, 2.5, 2.1, 0, 0, Math.PI * 2);
+  g.fill();
+  const toes = [[-3.3, -1.4, 1.25], [-1.1, -3.4, 1.2], [1.1, -3.4, 1.2], [3.3, -1.4, 1.15]];
+  toes.forEach(([tx, ty, r]) => {
+    g.beginPath();
+    g.ellipse(tx, ty, r, r * 1.08, 0, 0, Math.PI * 2);
+    g.fill();
+  });
+  g.restore();
+}
+function paintPaws() {
+  const c = pawCanvas();
+  if (!c) return;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  const now = performance.now();
+  for (let i = pawPrints.length - 1; i >= 0; i--) {
+    const p = pawPrints[i];
+    const age = now - p.t;
+    if (age > 2600) { pawPrints.splice(i, 1); continue; }
+    const a = age < 1500 ? 0.42 : 0.42 * (1 - (age - 1500) / 1100);
+    drawPaw(g, p.x, p.y, p.a, Math.max(0, a));
+  }
+  if (pawPrints.length) requestAnimationFrame(paintPaws);
+}
+function catPawTrack(fromX, toX, dur) {
+  const c = pawCanvas();
+  if (!c) return;
+  clearTimeout(pawTimer);
+  sizePawCanvas();
+  const dir = toX > fromX ? 1 : -1;
+  const pxPerSec = Math.abs(toX - fromX) / dur;
+  if (pxPerSec > 420) return; // 太快就不印了（例如跳轉）
+  let n = 0;
+  const stepMs = 150;
+  const total = dur * 1000;
+  const startT = performance.now();
+  function tick() {
+    const elapsed = performance.now() - startT;
+    if (elapsed > total + 300 || !catOn) return;
+    const ratio = Math.min(1, elapsed / total);
+    const x = fromX + (toX - fromX) * ratio;
+    const side = n % 2 === 0 ? 13 : 21;  // 左右腳交錯
+    const y = 58 + (n % 2 === 0 ? 0 : -1.2);
+    pawPrints.push({ x: x + side, y, a: dir > 0 ? 0 : Math.PI, t: performance.now() });
+    n++;
+    if (pawPrints.length === 1) requestAnimationFrame(paintPaws);
+    pawTimer = setTimeout(tick, stepMs);
+  }
+  tick();
+}
+function catMoveFx(target) {
+  const zzz = document.getElementById('cat-zzz');
+  const hint = document.getElementById('cat-hint');
+  const tx = faceLeft ? target + 30 : target + 34;
+  if (zzz) zzz.style.left = tx + 'px';
+  if (hint) hint.style.left = (target + 8) + 'px';
 }
 function catIdle() {
   if (!catOn) return;
@@ -666,8 +769,9 @@ function startCat() {
   const svg = catEl();
   if (!svg) return;
   svg.addEventListener('click', catPet);
+  window.addEventListener('resize', sizePawCanvas);
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  svg.style.transitionDuration = '0s';
+  svg.style.transition = 'none';
   svg.style.transform = `translateX(${Math.min(50, window.innerWidth - CAT_W - 8)}px)`;
   const hint = document.getElementById('cat-hint');
   hint.style.left = '58px';
